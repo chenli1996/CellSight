@@ -35,3 +35,4 @@ if __name__ == "__main__":
             trajectory.parameters[i].extrinsic)
         pcds.append(pcd)
     o3d.visualization.draw_geometries(pcds)
+    # test
