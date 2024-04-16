@@ -225,7 +225,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
 
         # Setting up the visualizer
     vis = o3d.visualization.Visualizer()
-    vis.create_window(width=image_width, height=image_height)
+    # vis.create_window(width=image_width, height=image_height)
     
     coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=para_eye)
     vis.add_geometry(pcd)
@@ -249,6 +249,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     print("my customize extrincis matrix:")
     print(extrinsic_matrix)
     view_ctl = vis.get_view_control()
+    # import pdb; pdb.set_trace()
     cam_pose_ctl = view_ctl.convert_to_pinhole_camera_parameters()
     cam_pose_ctl.intrinsic.height = image_height
     cam_pose_ctl.intrinsic.width = image_width
@@ -318,23 +319,24 @@ if __name__ == '__main__':
     # # o3d.io.write_point_cloud("./result/FoV_filtered_point_cloud_example.ply", filtered_pcd, write_ascii=True)
     
 #  the following code is for testing the rendering and saving function
-    pcd_name = 'soldier'
+    pcd_name = 'redandblack'
     participant = 'P01_V1'
+    data_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     if pcd_name == 'longdress':
         positions, orientations = parse_trajectory_data(
-            "./6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv",
+            data_path + "H1_nav.csv",
             user_index=participant)
     elif pcd_name == 'loot':
         positions, orientations = parse_trajectory_data(
-            "./6DoF-HMD-UserNavigationData-master/NavigationData/H2_nav.csv",
+            data_path + "H2_nav.csv",
             user_index=participant)
     elif pcd_name == 'redandblack':
         positions, orientations = parse_trajectory_data(
-            "./6DoF-HMD-UserNavigationData-master/NavigationData/H3_nav.csv",
+            data_path + "H3_nav.csv",
             user_index=participant)
     elif pcd_name == 'soldier':
         positions, orientations = parse_trajectory_data(
-            "./6DoF-HMD-UserNavigationData-master/NavigationData/H4_nav.csv",
+            data_path + "H4_nav.csv",
             user_index=participant)
     # draw_rendering_from_given_FoV_traces 
     # afterfov_list = []
