@@ -1,0 +1,1 @@
+ in hiddenpointremoval_test.py we test the HPM time with downsampling.
