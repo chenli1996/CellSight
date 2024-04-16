@@ -23,7 +23,7 @@ def parse_trajectory_data(file_path):
             orientations.append([float(row[4]), float(row[5]), float(row[6])])
     return positions, orientations
 
-trajectory_positions, trajectory_orientations = parse_trajectory_data("../6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv")
+trajectory_positions, trajectory_orientations = parse_trajectory_data("../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv")
 
 
 
@@ -87,11 +87,11 @@ center = selected_position + direction  # A point directly in front of the camer
 up = np.array([0, 1, 0])  # Assuming Y-up coordinate system
 
 # Apply the "look-at" parameters to the view control
-view_control = vis.get_view_control()
-view_control.set_lookat(center)
-view_control.set_front(center - eye)
-view_control.set_up(up)
-view_control.set_zoom(1)  # Adjust zoom if necessary
+# view_control = vis.get_view_control()
+# view_control.set_lookat(center)
+# view_control.set_front(center - eye)
+# view_control.set_up(up)
+# view_control.set_zoom(1)  # Adjust zoom if necessary
 
 
 
