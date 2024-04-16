@@ -36,3 +36,5 @@ if __name__ == "__main__":
         pcds.append(pcd)
     o3d.visualization.draw_geometries(pcds)
     # test
+    # test private rep sycn 
+    # test stage
