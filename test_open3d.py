@@ -11,7 +11,12 @@
 
 
 import open3d
+print(open3d.__version__)
 vis = open3d.visualization.Visualizer()
-# vis.create_window() # the 0.17.0 version demands create_window() first, otherwise gives segmentation fault. Why?
+vis.create_window() # the 0.17.0 version demands create_window() first, otherwise gives segmentation fault. Why?
 ctr = vis.get_view_control() 
+vis.poll_events()
+vis.update_renderer()
+vis.capture_depth_float_buffer(do_render=True)
+# vis.capture_screen_back_buffer('open3d_test_results/test.png')
 assert id(ctr) == id(vis.get_view_control())  # assertion error.

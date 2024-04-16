@@ -95,21 +95,22 @@ def downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8):
 def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
                                 trajectory_index,point_cloud_name='longdress'):    
     # get the point cloud data
+    data_path = "../point_cloud_data/"
     # shift the pcd to the X,Z plane origin with offset
     if point_cloud_name == 'longdress':
-        point_cloud_path = '8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
+        point_cloud_path = data_path + '8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,147]))#longdress
     elif point_cloud_name == 'loot':
-        point_cloud_path = '8i/loot/loot/Ply/loot_vox10_'+str(1000+trajectory_index%150)+'.ply'
+        point_cloud_path = data_path + '8i/loot/loot/Ply/loot_vox10_'+str(1000+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([217,0,231]))#loot
     elif point_cloud_name == 'redandblack':
-        point_cloud_path = '8i/redandblack/redandblack/Ply/redandblack_vox10_'+str(1450+trajectory_index%150)+'.ply'
+        point_cloud_path = data_path + '8i/redandblack/redandblack/Ply/redandblack_vox10_'+str(1450+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([365,0,241]))#redandblack
     elif point_cloud_name == 'soldier':
-        point_cloud_path = '8i/soldier/soldier/Ply/soldier_vox10_0'+str(536+trajectory_index%150)+'.ply'
+        point_cloud_path = data_path + '8i/soldier/soldier/Ply/soldier_vox10_0'+str(536+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([228,0,198]))#soldier
 
@@ -170,13 +171,13 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
 
     
     
-    # o3d.visualization.draw([pcd,coordinate_frame],
-    #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
-    #                         non_blocking_and_return_uid = False,
-    #                        raw_mode=True,
-    #                        show_skybox=False,
-    #                     #    point_size = 4,
-    #                         )
+    o3d.visualization.draw([pcd,coordinate_frame],
+                           intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
+                            non_blocking_and_return_uid = False,
+                           raw_mode=True,
+                           show_skybox=False,
+                        #    point_size = 4,
+                            )
     return original_points,afterhpr,afterfov
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
@@ -342,12 +343,12 @@ if __name__ == '__main__':
     # afterfov_list = []
     # afterhpr_list = []
     # original_list = []
-    # end_index = len(positions)
-    # end_index = 150
-    # for index in range(0, end_index,1):
-    #     print('index:',index)
-    #     original,afterhpr,afterfov  = draw_rendering_from_given_FoV_traces(positions,orientations,
-    #                             trajectory_index=index,point_cloud_name=pcd_name) 
+    end_index = len(positions)
+    end_index = 1
+    for index in range(0, end_index,1):
+        print('index:',index)
+        original,afterhpr,afterfov  = draw_rendering_from_given_FoV_traces(positions,orientations,
+                                trajectory_index=index,point_cloud_name=pcd_name) 
     #     original_list.append(original)
     #     afterhpr_list.append(afterhpr)
     #     afterfov_list.append(afterfov)
@@ -359,10 +360,10 @@ if __name__ == '__main__':
     # save the renderred image to a file
     # check open3d version
     # print(o3d.__version__)
-    end_index = len(positions)
-    end_index = 1
-    for index in range(0, end_index,90):
-        save_rendering_from_given_FoV_traces(positions,orientations,
-                                trajectory_index=index,point_cloud_name=pcd_name)
+    # end_index = len(positions)
+    # end_index = 1
+    # for index in range(0, end_index,90):
+    #     save_rendering_from_given_FoV_traces(positions,orientations,
+    #                             trajectory_index=index,point_cloud_name=pcd_name)
         
     
