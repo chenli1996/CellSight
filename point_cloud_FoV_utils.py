@@ -1,6 +1,7 @@
 import numpy as np
 import open3d as o3d
 from node_feature_utils import parse_trajectory_data
+import os
 # from test_draw import draw_my
 # user a fixed random seed
 np.random.seed(0)
@@ -123,13 +124,15 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # get yaw pitch roll and to orientation
     selected_orientation = trajectory_orientations[trajectory_index]  # First orientation (yaw, pitch, roll)
     pitch_degree, yaw_degree, roll_degree = selected_orientation  # Convert degrees to radians if necessary
-    image_width, image_height = np.array([1280, 720])
+    # pitch_degree += 45
+    # pitch_degree, yaw_degree, roll_degree = [0,0,0]
+    image_width, image_height = np.array([1920, 1080])
     intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
     # Define camera extrinsic parameters (example values for rotation and translation)
     extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
     # Create a coordinate frame (axis) at the origin, you can adjust the size as needed
-    coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=(0,0,0))
-
+    coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=para_eye)
+    
     # o3d.visualization.draw([pcd,coordinate_frame],
     #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
     #                         non_blocking_and_return_uid = False,
@@ -140,10 +143,10 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     
     # #  number of points in the point cloud
     original_points = len(pcd.points)
-    print('number of points in the point cloud:',original_points)
+    # print('number of points in the point cloud:',original_points)
 
     # downsample and remove hidden points
-    pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=1)
+    # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=1)
 
     # o3d.visualization.draw([pcd,coordinate_frame],
     #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
@@ -154,9 +157,9 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     #                         )
     # # number of points in the point cloud
     afterhpr = len(pcd.points)
-    print('number of points in the point cloud after HPR:',afterhpr)
+    # print('number of points in the point cloud after HPR:',afterhpr)
 
-    pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
+    # pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
 
     # o3d.visualization.draw([pcd,coordinate_frame],
     #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
@@ -167,21 +170,22 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     #                         )    
     # # number of points in the point cloud
     afterfov = len(pcd.points)
-    print('number of points in the point cloud after FoV:',afterfov)
+    # print('number of points in the point cloud after FoV:',afterfov)
 
     
-    
+    print('draw extrinsic matrix:',extrinsic_matrix,selected_orientation,selected_position,intrinsic_matrix)
     o3d.visualization.draw([pcd,coordinate_frame],
                            intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
-                            non_blocking_and_return_uid = False,
+                            # non_blocking_and_return_uid = False,
                            raw_mode=True,
                            show_skybox=False,
                         #    point_size = 4,
+                            field_of_view=90.0,
                             )
     return original_points,afterhpr,afterfov
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
-                                trajectory_index,point_cloud_name='longdress'):    
+                                trajectory_index,point_cloud_name='longdress',user='P03_V1'):    
     # get the point cloud data
     data_path = "../point_cloud_data/"
     # shift the pcd to the X,Z plane origin with offset
@@ -211,29 +215,27 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # get yaw pitch roll and to orientation
     selected_orientation = trajectory_orientations[trajectory_index]  # First orientation (yaw, pitch, roll)
     pitch_degree, yaw_degree, roll_degree = selected_orientation  # Convert degrees to radians if necessary
-    # pitch_degree += 45
+    # pitch_degree, yaw_degree, roll_degree = [0,-85,0]
     # image_width, image_height = np.array([1280, 720])
     image_width, image_height = np.array([1920, 1080])
     intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
     # Define camera extrinsic parameters (example values for rotation and translation)
     extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
-
     # downsample and remove hidden points
-    # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=4)
-    # pcd = down_pcd_remove
+    pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=1)
     # 
-    # pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
+    pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
 
-
-        # Setting up the visualizer
+    # Setting up the visualizer
     vis = o3d.visualization.Visualizer()
     # vis.create_window(width=image_width, height=image_height)
     vis.create_window(visible=False)
     
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=para_eye)
     vis.add_geometry(pcd)
+    # vis.add_geometry(coordinate_frame)
     # print("my customize extrincis matrix:")
-    # print(extrinsic_matrix)
+    # print(extrinsic_matrix,selected_orientation,selected_position,intrinsic_matrix)
     view_ctl = vis.get_view_control()
     # import pdb; pdb.set_trace()
     cam_pose_ctl = view_ctl.convert_to_pinhole_camera_parameters()
@@ -242,16 +244,39 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     cam_pose_ctl.intrinsic.intrinsic_matrix = intrinsic_matrix
     cam_pose_ctl.extrinsic = extrinsic_matrix
     view_ctl.convert_from_pinhole_camera_parameters(cam_pose_ctl, allow_arbitrary=True)
-
+    view_ctl.change_field_of_view()
     # render
     vis.poll_events()
     vis.update_renderer()
     # vis.run()
-    
-    vis.capture_screen_image('../result/longdress/fov_'+str(trajectory_index).zfill(3)+'.png', do_render=False) 
+    # w
+    # check path exist or not, if not create it
+    if not os.path.exists('../result/'+point_cloud_name+'/'+user):
+        os.makedirs('../result/'+point_cloud_name+'/'+user)        
+    vis.capture_screen_image('../result/'+point_cloud_name+'/'+user+'/fov_'+str(trajectory_index).zfill(3)+'.png', do_render=False) 
     # index should have 3 digits
     vis.destroy_window()
 
+
+def get_point_cloud_user(pcd_name='longdress',participant='P03_V1'):
+    data_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
+    if pcd_name == 'longdress':
+        positions, orientations = parse_trajectory_data(
+            data_path + "H1_nav.csv",
+            user_index=participant)
+    elif pcd_name == 'loot':
+        positions, orientations = parse_trajectory_data(
+            data_path + "H2_nav.csv",
+            user_index=participant)
+    elif pcd_name == 'redandblack':
+        positions, orientations = parse_trajectory_data(
+            data_path + "H3_nav.csv",
+            user_index=participant)
+    elif pcd_name == 'soldier':
+        positions, orientations = parse_trajectory_data(
+            data_path + "H4_nav.csv",
+            user_index=participant)
+    return positions, orientations
 
 if __name__ == '__main__':
 #   the following code is for testing the in-FoV and draw intrinsic and extrinsic matrix functions
@@ -279,27 +304,9 @@ if __name__ == '__main__':
     
     # # save the filtered point cloud to ply file
     # # o3d.io.write_point_cloud("./result/FoV_filtered_point_cloud_example.ply", filtered_pcd, write_ascii=True)
-    
+
 #  the following code is for testing the rendering and saving function
-    pcd_name = 'longdress'
-    participant = 'P01_V1'
-    data_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
-    if pcd_name == 'longdress':
-        positions, orientations = parse_trajectory_data(
-            data_path + "H1_nav.csv",
-            user_index=participant)
-    elif pcd_name == 'loot':
-        positions, orientations = parse_trajectory_data(
-            data_path + "H2_nav.csv",
-            user_index=participant)
-    elif pcd_name == 'redandblack':
-        positions, orientations = parse_trajectory_data(
-            data_path + "H3_nav.csv",
-            user_index=participant)
-    elif pcd_name == 'soldier':
-        positions, orientations = parse_trajectory_data(
-            data_path + "H4_nav.csv",
-            user_index=participant)
+    # positions,orientations = get_point_cloud_user(pcd_name='longdress',participant='P03_V1')
     # draw_rendering_from_given_FoV_traces 
     # afterfov_list = []
     # afterhpr_list = []
@@ -310,7 +317,7 @@ if __name__ == '__main__':
     #     print('index:',index)
     #     original,afterhpr,afterfov  = draw_rendering_from_given_FoV_traces(positions,orientations,
     #                             trajectory_index=index,point_cloud_name=pcd_name) 
-        # original_list.append(original)
+    #     # original_list.append(original)
     #     afterhpr_list.append(afterhpr)
     #     afterfov_list.append(afterfov)
     # print('average original_list:',sum(original_list)/len(original_list))
@@ -320,13 +327,29 @@ if __name__ == '__main__':
         
     # save the renderred image to a file
     # check open3d version
-    print(o3d.__version__)
-    end_index = len(positions)
-    print('end_index:',end_index)
-    # end_index = 30
-    for index in range(0, end_index,1):
-        print('index:',index)
-        save_rendering_from_given_FoV_traces(positions,orientations,
-                                trajectory_index=index,point_cloud_name=pcd_name)
+    # print(o3d.__version__)
+    for pcd_name in ['loot','redandblack','soldier']:
+# for pcd_name in ['longdress','loot','redandblack','soldier']:        
+        for user in ['P08_V1','P03_V1','P01_V1']:
+        # for user in ['P12_V1']:
+            positions,orientations = get_point_cloud_user(pcd_name=pcd_name,participant=user)
+            end_index = len(positions)
+            # end_index = 1
+            for index in range(0, end_index,1):
+                print('index:',index)
+                save_rendering_from_given_FoV_traces(positions,orientations,
+                                        trajectory_index=index,point_cloud_name=pcd_name,user=user)
+            # cd to  this directory '../result/'+point_cloud_name+'/'+user and run the following command ffmpeg -framerate 30 -pattern_type glob -i 'fov_*.png' -c:v libx264 -pix_fmt yuv420p output_video_user.mp4
+                
+
+
+    # positions,orientations = get_point_cloud_user(pcd_name='longdress',participant='P03_V1')
+    # end_index = len(positions)
+    # print('end_index:',end_index)
+    # # end_index = 1
+    # for index in range(0, end_index,1):
+    #     print('index:',index)
+    #     save_rendering_from_given_FoV_traces(positions,orientations,
+    #                             trajectory_index=index,point_cloud_name=pcd_name,user=participant)
         
     
