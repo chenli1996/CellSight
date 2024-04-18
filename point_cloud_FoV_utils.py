@@ -274,7 +274,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     vis.poll_events()
     vis.update_renderer()
     # vis.run()
-    w
+    # w
     # check path exist or not, if not create it
     if not os.path.exists('../result/'+point_cloud_name+'/'+user):
         os.makedirs('../result/'+point_cloud_name+'/'+user)        
