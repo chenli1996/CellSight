@@ -1,0 +1,20 @@
+from point_cloud_FoV_utils import *
+if __name__ == '__main__':
+    for pcd_name in ['soldier']:
+#    for pcd_name in ['longdress','loot','redandblack','soldier']:        
+        # for user in ['P08_V1','P03_V1','P01_V1']:
+        for user in ['P01_V1']:
+            positions,orientations = get_point_cloud_user(pcd_name=pcd_name,participant=user)
+            end_index = len(positions)
+            # end_index = 1
+            for index in range(0, end_index,1):
+                print('index:',index)
+                save_rendering_from_given_FoV_traces(positions,orientations,
+                                        trajectory_index=index,point_cloud_name=pcd_name,user=user,prefix='visible_points')
+            # cd to  this directory '../result/'+point_cloud_name+'/'+user and run the following command ffmpeg -framerate 30 -pattern_type glob -i 'fov_*.png' -c:v libx264 -pix_fmt yuv420p output_video_user.mp4
+                
+                # get all file whose name include 'vs code' in the current directory linux
+
+
+                
+                
