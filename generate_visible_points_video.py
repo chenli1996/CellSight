@@ -1,12 +1,18 @@
 from point_cloud_FoV_utils import *
+import cProfile
+import pstats
+
 if __name__ == '__main__':
+    profiler = cProfile.Profile()
+    profiler.enable()
+
     for pcd_name in ['soldier']:
 #    for pcd_name in ['longdress','loot','redandblack','soldier']:        
         # for user in ['P08_V1','P03_V1','P01_V1']:
         for user in ['P01_V1']:
             positions,orientations = get_point_cloud_user(pcd_name=pcd_name,participant=user)
             end_index = len(positions)
-            # end_index = 1
+            end_index = 30
             for index in range(0, end_index,1):
                 print('index:',index)
                 save_rendering_from_given_FoV_traces(positions,orientations,
@@ -15,6 +21,8 @@ if __name__ == '__main__':
                 
                 # get all file whose name include 'vs code' in the current directory linux
 
-
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats('cumulative')
+    stats.print_stats()
                 
                 

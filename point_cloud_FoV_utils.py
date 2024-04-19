@@ -208,7 +208,7 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     return original_points,afterhpr,afterfov
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
-                                trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix=''):    
+                                trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix='',save=False):    
     # get the point cloud data
     data_path = "../point_cloud_data/"
     # shift the pcd to the X,Z plane origin with offset
@@ -247,7 +247,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # downsample and remove hidden points
 
     if prefix == 'visible_points':
-        pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=1)
+        pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8)
         pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
 
 
@@ -275,10 +275,11 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     vis.update_renderer()
     # vis.run()
     # w
+    if save:
     # check path exist or not, if not create it
-    if not os.path.exists('../result/'+point_cloud_name+'/'+user):
-        os.makedirs('../result/'+point_cloud_name+'/'+user)        
-    vis.capture_screen_image('../result/'+point_cloud_name+'/'+user+'/'+prefix+'fov_'+str(trajectory_index).zfill(3)+'.png', do_render=False) 
+        if not os.path.exists('../result/'+point_cloud_name+'/'+user):
+            os.makedirs('../result/'+point_cloud_name+'/'+user)        
+        vis.capture_screen_image('../result/'+point_cloud_name+'/'+user+'/'+prefix+'fov_'+str(trajectory_index).zfill(3)+'.png', do_render=False) 
     # index should have 3 digits
     vis.destroy_window()
 
