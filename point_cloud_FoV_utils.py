@@ -252,8 +252,9 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # downsample and remove hidden points
 
     if prefix == 'visible_points':
-        pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8)
         pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
+        pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8)
+        
 
 
     # Setting up the visualizer
