@@ -291,7 +291,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     vis.destroy_window()
 
 
-def get_point_cloud_user(pcd_name='longdress', participant='P03_V1'):
+def get_point_cloud_user_trajectory(pcd_name='longdress', participant='P03_V1'):
     data_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     file_mapping = {
         'longdress': 'H1_nav.csv',
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     # # o3d.io.write_point_cloud("./result/FoV_filtered_point_cloud_example.ply", filtered_pcd, write_ascii=True)
 
 #  the following code is for testing the rendering and saving function
-    # positions,orientations = get_point_cloud_user(pcd_name='longdress',participant='P03_V1')
+    # positions,orientations = get_point_cloud_user_trajectory(pcd_name='longdress',participant='P03_V1')
     # draw_rendering_from_given_FoV_traces 
     # afterfov_list = []
     # afterhpr_list = []
@@ -368,7 +368,7 @@ if __name__ == '__main__':
 # # for pcd_name in ['longdress','loot','redandblack','soldier']:        
 #         for user in ['P08_V1','P03_V1','P01_V1']:
 #         # for user in ['P12_V1']:
-#             positions,orientations = get_point_cloud_user(pcd_name=pcd_name,participant=user)
+#             positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=user)
 #             end_index = len(positions)
 #             # end_index = 1
 #             for index in range(0, end_index,1):
@@ -377,7 +377,7 @@ if __name__ == '__main__':
 #                                         trajectory_index=index,point_cloud_name=pcd_name,user=user,prefix='all_points')         
 
 
-    # positions,orientations = get_point_cloud_user(pcd_name='longdress',participant='P03_V1')
+    # positions,orientations = get_point_cloud_user_trajectory(pcd_name='longdress',participant='P03_V1')
     # end_index = len(positions)
     # print('end_index:',end_index)
     # # end_index = 1

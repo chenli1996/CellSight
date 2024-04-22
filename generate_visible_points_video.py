@@ -10,7 +10,7 @@ if __name__ == '__main__':
 #    for pcd_name in ['longdress','loot','redandblack','soldier']:        
         # for user in ['P08_V1','P03_V1','P01_V1']:
         for user in ['P01_V1']:
-            positions,orientations = get_point_cloud_user(pcd_name=pcd_name,participant=user)
+            positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=user)
             end_index = len(positions)
             end_index = 30
             for index in range(0, end_index,1):
