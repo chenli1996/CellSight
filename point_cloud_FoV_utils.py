@@ -142,6 +142,7 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # get XYZ data
     selected_position = trajectory_positions[trajectory_index]
     para_eye = [i*1024/1.8 for i in selected_position]
+    # para_eye = [i*1024/3.4 for i in selected_position]
     para_eye[2] = -para_eye[2]
     para_eye = np.array(para_eye).reshape(3,1)
     # get yaw pitch roll and to orientation
@@ -207,15 +208,14 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
                             )
     return original_points,afterhpr,afterfov
 
-def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
-                                trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix='',save=False):    
-    # get the point cloud data
+
+def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
     data_path = "../point_cloud_data/"
     # shift the pcd to the X,Z plane origin with offset
     if point_cloud_name == 'longdress':
         point_cloud_path = data_path + '8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
-        pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,147]))#longdress
+        pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,148]))#longdress
     elif point_cloud_name == 'loot':
         point_cloud_path = data_path + '8i/loot/loot/Ply/loot_vox10_'+str(1000+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
@@ -228,10 +228,15 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
         point_cloud_path = data_path + '8i/soldier/soldier/Ply/soldier_vox10_0'+str(536+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([228,0,198]))#soldier
-
+    return pcd
     
+
+def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
+                                trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix='',save=False,render_flag=False):    
+    pcd = get_pcd_data(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index)
     # get XYZ data
     selected_position = trajectory_positions[trajectory_index]
+    # para_eye = [i*1024/1.8 for i in selected_position]
     para_eye = [i*1024/1.8 for i in selected_position]
     para_eye[2] = -para_eye[2]
     para_eye = np.array(para_eye).reshape(3,1)
@@ -254,7 +259,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # Setting up the visualizer
     vis = o3d.visualization.Visualizer()
     # vis.create_window(width=image_width, height=image_height)
-    vis.create_window(visible=False)
+    vis.create_window(visible=render_flag)
     
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=para_eye)
     vis.add_geometry(pcd)
@@ -273,7 +278,8 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # render
     vis.poll_events()
     vis.update_renderer()
-    # vis.run()
+    if render_flag:
+        vis.run()
     # w
     if save:
     # check path exist or not, if not create it
@@ -296,6 +302,8 @@ def get_point_cloud_user(pcd_name='longdress', participant='P03_V1'):
     if file_name is None:
         raise ValueError(f"Invalid point cloud name: {pcd_name}")
     positions, orientations = parse_trajectory_data(data_path + file_name, user_index=participant)
+    # get the centroid of the positions
+
     return positions, orientations
 
 if __name__ == '__main__':
