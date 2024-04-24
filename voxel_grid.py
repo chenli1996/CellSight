@@ -11,21 +11,11 @@ pcd = get_pcd_data(point_cloud_name='longdress', trajectory_index=0)
 
 # Define voxel size
 voxel_size = int(256/2)  # You can adjust this size as needed
-
-# Create a voxel grid
-# min_bounds = np.array([0, 0, 0])
-# max_bounds = np.array([512, 1024, 512])
-
 min_bounds = np.array([-251,    0, -242])
 max_bounds = np.array([ 262, 1023,  512])
 # (512+242)/128 = 5.891
 # (262+251)/128 = 4.007
 # (1023+0)/128 = 7.992
-
-
-
-# import pdb; pdb.set_trace()
-
 voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd, voxel_size, min_bounds, max_bounds)
 
 # Get the points and their indices
@@ -94,6 +84,12 @@ line_sets_all_space = line_sets_from_voxel_grid_space(min_bounds, max_bounds, vo
 
 # add a coordinate frame at (0,0,0) min_bounds
 coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=min_bounds)
+# add a sphere at the [0,500,500]
+sphere = o3d.geometry.TriangleMesh.create_sphere(radius=16)
+sphere.translate([0,500,500])
+# change color to red
+sphere.paint_uniform_color([1,0,0])
+
 
 
 octree = voxel_grid.to_octree(max_depth=3)
@@ -102,7 +98,7 @@ octree = voxel_grid.to_octree(max_depth=3)
 # o3d.visualization.draw_geometries([voxel_grid, *line_sets_all_space, coordinate_frame])
 # o3d.visualization.draw_geometries([octree,coordinate_frame, octree])
 # o3d.visualization.draw_geometries([voxel_grid,*line_sets_all_space,*line_sets,coordinate_frame])
-o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame])
+o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame,sphere])
 # add two points in the pcd, one is the min_bound and the other is the max_bound
 pcd.points.append(min_bounds)
 pcd.points.append(max_bounds)
