@@ -5,30 +5,30 @@ from point_cloud_FoV_utils import *
 
 # longdress_path = '../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_1051.ply'
 # pcd = o3d.io.read_point_cloud(longdress_path)
+def test():
+    pcd = get_pcd_data(point_cloud_name='longdress', trajectory_index=0)
+    # labels = pcd.cluster_dbscan(eps=0.02, min_points=10, print_progress=True)
 
-pcd = get_pcd_data(point_cloud_name='longdress', trajectory_index=0)
-# labels = pcd.cluster_dbscan(eps=0.02, min_points=10, print_progress=True)
+    # Define voxel size
+    voxel_size = int(256/2)  # You can adjust this size as needed
+    min_bounds = np.array([-251,    0, -242])
+    max_bounds = np.array([ 262, 1023,  512])
+    # (512+242)/128 = 5.891
+    # (262+251)/128 = 4.007
+    # (1023+0)/128 = 7.992
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd, voxel_size, min_bounds, max_bounds)
 
-# Define voxel size
-voxel_size = int(256/2)  # You can adjust this size as needed
-min_bounds = np.array([-251,    0, -242])
-max_bounds = np.array([ 262, 1023,  512])
-# (512+242)/128 = 5.891
-# (262+251)/128 = 4.007
-# (1023+0)/128 = 7.992
-voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd, voxel_size, min_bounds, max_bounds)
+    # Get the points and their indices
+    points = np.asarray(pcd.points)
+    voxel_indices = np.floor(points / voxel_size).astype(int)
+    # Find unique indices and count the occurrences
+    unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
 
-# Get the points and their indices
-points = np.asarray(pcd.points)
-voxel_indices = np.floor(points / voxel_size).astype(int)
-# Find unique indices and count the occurrences
-unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
+    # Combine indices and counts into a dictionary for easier access if needed
+    voxel_counts = {tuple(index): count for index, count in zip(unique_indices, counts)}
 
-# Combine indices and counts into a dictionary for easier access if needed
-voxel_counts = {tuple(index): count for index, count in zip(unique_indices, counts)}
-
-# get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
-voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 for index in voxel_counts.keys()}
+    # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
+    voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 for index in voxel_counts.keys()}
 
 
 # Function to create a wireframe cube at a given location with a given size
@@ -67,7 +67,7 @@ def line_sets_from_voxel_grid(voxel_grid):
         line_set = create_wireframe_cube(center, voxel_size)
         line_sets.append(line_set)
     return line_sets
-line_sets = line_sets_from_voxel_grid(voxel_grid)
+# line_sets = line_sets_from_voxel_grid(voxel_grid)
 
 # # create line sets for the whole voxel grid space from (0,0,0) to (1024,1024,1024)
 def line_sets_from_voxel_grid_space(min_bounds, max_bounds, voxel_size):
@@ -79,30 +79,30 @@ def line_sets_from_voxel_grid_space(min_bounds, max_bounds, voxel_size):
                 line_set = create_wireframe_cube(center, voxel_size)
                 line_sets.append(line_set)
     return line_sets
-line_sets_all_space = line_sets_from_voxel_grid_space(min_bounds, max_bounds, voxel_size)
+# line_sets_all_space = line_sets_from_voxel_grid_space(min_bounds, max_bounds, voxel_size)
 
 
-# add a coordinate frame at (0,0,0) min_bounds
-coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=min_bounds)
-# add a sphere at the [0,500,500]
-sphere = o3d.geometry.TriangleMesh.create_sphere(radius=16)
-sphere.translate([0,500,500])
-# change color to red
-sphere.paint_uniform_color([1,0,0])
+# # add a coordinate frame at (0,0,0) min_bounds
+# coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=min_bounds)
+# # add a sphere at the [0,500,500]
+# sphere = o3d.geometry.TriangleMesh.create_sphere(radius=16)
+# sphere.translate([0,500,500])
+# # change color to red
+# sphere.paint_uniform_color([1,0,0])
 
 
 
-octree = voxel_grid.to_octree(max_depth=3)
+# octree = voxel_grid.to_octree(max_depth=3)
 
 # o3d.visualization.draw_geometries([voxel_grid, *line_sets, coordinate_frame])
 # o3d.visualization.draw_geometries([voxel_grid, *line_sets_all_space, coordinate_frame])
 # o3d.visualization.draw_geometries([octree,coordinate_frame, octree])
 # o3d.visualization.draw_geometries([voxel_grid,*line_sets_all_space,*line_sets,coordinate_frame])
-o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame,sphere])
-# add two points in the pcd, one is the min_bound and the other is the max_bound
-pcd.points.append(min_bounds)
-pcd.points.append(max_bounds)
-pcd.colors.append([1,0,0])
-pcd.colors.append([0,1,0])
-# o3d.visualization.draw_geometries([pcd,voxel_grid,*line_sets_all_space,coordinate_frame])
-print('Done')
+# o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame,sphere])
+# # add two points in the pcd, one is the min_bound and the other is the max_bound
+# pcd.points.append(min_bounds)
+# pcd.points.append(max_bounds)
+# pcd.colors.append([1,0,0])
+# pcd.colors.append([0,1,0])
+# # o3d.visualization.draw_geometries([pcd,voxel_grid,*line_sets_all_space,coordinate_frame])
+# print('Done')

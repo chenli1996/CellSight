@@ -27,3 +27,6 @@ p.sort_stats('cumulative').print_stats(100)
 
 # or real time profiling
 # py-spy top -- python your_script.py
+
+# kill -9 $(ps aux | grep '[p]ython' | awk '{print $2}')
+# kill -9 $(ps | grep '[p]ython' | awk '{print $1}')

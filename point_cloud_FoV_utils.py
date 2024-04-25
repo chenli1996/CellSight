@@ -14,6 +14,7 @@ def get_camera_intrinsic_matrix(image_width, image_height):
                      [0, 0, 1]])
 def get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, t):
     # from world coordinate to camera coordinate, R is 3*3, t is 3*1, 
+    t = np.array(t).reshape(3,1)
     # t is camera position in world coordinate(numpy array)     
     # Define camera extrinsic parameters (example values for rotation and translation)
     # define x,y,z rotation matrix
@@ -69,10 +70,10 @@ def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, imag
     # o3d.visualization.draw([filtered_pcd,coordinate_frame],intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix)
     return filtered_pcd
 
-def randomly_add_points_in_point_cloud(pcd, N):
-    new_points = np.random.uniform(np.min(np.asarray(pcd.points)-500, axis=0),
-                                    np.max(np.asarray(pcd.points)+500, axis=0),
-                                    size=(N, 3))
+def randomly_add_points_in_point_cloud(N,min_bound,max_bound):
+    # min_bound = np.min(np.asarray(pcd.points), axis=0)
+    # max_bound = np.max(np.asarray(pcd.points), axis=0)
+    new_points = np.random.uniform(min_bound, max_bound, size=(N, 3))
     new_colors = np.zeros((N, 3))
     # Create a new point cloud from the new points
     new_pcd = o3d.geometry.PointCloud()
