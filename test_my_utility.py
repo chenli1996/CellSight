@@ -71,8 +71,8 @@ def test_pcd_min_max_bound():
         # Min bound for soldier: [-204.    0. -168.]
         # Max bound for soldier: [ 262. 1023.  311.]
         # overall bound: z -= 1
-        # Min bound for all: [-251.    0. -242.]
-        # Max bound for all: [ 262. 1023.  512.]
+        # Min bound for all: [-251.    0. -241.]
+        # Max bound for all: [ 262. 1023.  511.]
         
         
 

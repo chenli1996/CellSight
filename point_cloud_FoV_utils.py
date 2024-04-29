@@ -65,7 +65,8 @@ def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, imag
     # Create a new point cloud from filtered points
     filtered_pcd = o3d.geometry.PointCloud()
     filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points)
-    filtered_pcd.colors = o3d.utility.Vector3dVector(np.array(pcd.colors)[in_fov_indices])
+    if len(pcd.colors) > 0:
+        filtered_pcd.colors = o3d.utility.Vector3dVector(np.array(pcd.colors)[in_fov_indices])
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=np.array(t))
     # o3d.visualization.draw([filtered_pcd,coordinate_frame],intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix)
     return filtered_pcd
@@ -74,11 +75,22 @@ def randomly_add_points_in_point_cloud(N,min_bound,max_bound):
     # min_bound = np.min(np.asarray(pcd.points), axis=0)
     # max_bound = np.max(np.asarray(pcd.points), axis=0)
     new_points = np.random.uniform(min_bound, max_bound, size=(N, 3))
-    new_colors = np.zeros((N, 3))
+    # evenly distributed in the current point cloud space
+    # x = np.linspace(min_bound[0], max_bound[0], num=N)
+    # y = np.linspace(min_bound[1], max_bound[1], num=N)
+    # z = np.linspace(min_bound[2], max_bound[2], num=N)
+    # Create a meshgrid, which creates a rectangular grid out of the x, y, and z arrays
+    # X, Y, Z = np.meshgrid(x, y, z, indexing='ij')  # Use 'ij' indexing for Cartesian coordinate ordering
+
+    # Reshape the grids to form a list of coordinates for points in 3D space
+    # new_points = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
+
+    # new_points
+    # new_colors = np.zeros((N, 3))
     # Create a new point cloud from the new points
     new_pcd = o3d.geometry.PointCloud()
     new_pcd.points = o3d.utility.Vector3dVector(new_points)
-    new_pcd.colors = o3d.utility.Vector3dVector(new_colors)
+    # new_pcd.colors = o3d.utility.Vector3dVector(new_colors)
     # Visualize the new point cloud
     # o3d.visualization.draw_geometries([new_pcd])
     return new_pcd
@@ -216,7 +228,7 @@ def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
     if point_cloud_name == 'longdress':
         point_cloud_path = data_path + '8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
-        pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,148]))#longdress
+        pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,149]))#longdress
     elif point_cloud_name == 'loot':
         point_cloud_path = data_path + '8i/loot/loot/Ply/loot_vox10_'+str(1000+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)

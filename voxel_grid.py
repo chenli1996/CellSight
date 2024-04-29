@@ -15,7 +15,7 @@ def test():
     max_bounds = np.array([ 262, 1023,  512])
     # (512+242)/128 = 5.891
     # (262+251)/128 = 4.007
-    # (1023+0)/128 = 7.992
+    # (1023+0)/128 = 7.992 
     voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd, voxel_size, min_bounds, max_bounds)
 
     # Get the points and their indices
@@ -29,6 +29,21 @@ def test():
 
     # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
     voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 for index in voxel_counts.keys()}
+
+def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds):
+    # Get the points and their indices
+    points = np.asarray(pcd.points).copy()
+    points -= min_bounds
+    voxel_indices = np.floor(points / voxel_size).astype(int)
+    
+    # Find unique indices and count the occurrences
+    unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
+    # Combine indices and counts into a dictionary for easier access if needed
+    point_counts_in_voxel = {tuple(index): count for index, count in zip(unique_indices, counts)}
+    # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
+    voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 + min_bounds for index in point_counts_in_voxel.keys()}
+    # import pdb; pdb.set_trace()
+    return point_counts_in_voxel, voxel_grid_coords
 
 
 # Function to create a wireframe cube at a given location with a given size
@@ -63,6 +78,7 @@ def create_wireframe_cube(center, size):
 def line_sets_from_voxel_grid(voxel_grid):
     line_sets = []
     for voxel in voxel_grid.get_voxels():
+        # import pdb; pdb.set_trace()
         center = np.array(voxel_grid.get_voxel_center_coordinate(voxel.grid_index)) #* voxel_size + np.array([voxel_size / 2, voxel_size / 2, voxel_size / 2])
         line_set = create_wireframe_cube(center, voxel_size)
         line_sets.append(line_set)
@@ -106,3 +122,36 @@ def line_sets_from_voxel_grid_space(min_bounds, max_bounds, voxel_size):
 # pcd.colors.append([0,1,0])
 # # o3d.visualization.draw_geometries([pcd,voxel_grid,*line_sets_all_space,coordinate_frame])
 # print('Done')
+def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), max_bounds=np.array([ 262, 1023,  511])):
+    # Define voxel size
+    # voxel_size = int(256)  # You can adjust this size as needed
+    # min_bounds = np.array([-251,    0, -241]) 
+    # max_bounds = np.array([ 262, 1023,  511])
+    # min_bounds = np.array([0,    0, 0]) 
+    # max_bounds = np.array([ 1023, 1023,  1023]) 
+    print('min_bounds:',min_bounds)
+    print('max_bounds:',max_bounds)
+    # print('voxel_grid voxel:',voxel_grid.get_voxels())
+    # print('voxel_grid voxel:',len(voxel_grid.get_voxels()))
+    # get the graph max bound after voxelization
+    graph_voxel_grid_max_bound = (np.floor((max_bounds - min_bounds) / voxel_size)+1)*voxel_size + min_bounds-1
+    graph_voxel_grid_min_bound = min_bounds
+    # change to int
+    graph_voxel_grid_max_bound = graph_voxel_grid_max_bound.astype(int)
+    graph_voxel_grid_min_bound = graph_voxel_grid_min_bound.astype(int)
+    print('graph max_bound:',graph_voxel_grid_max_bound)
+    print('graph min_bound:',graph_voxel_grid_min_bound)
+
+    pcd_N = randomly_add_points_in_point_cloud(
+        N=80000,min_bound=graph_voxel_grid_min_bound,max_bound=graph_voxel_grid_max_bound)
+    # get the voxel grid for the new pcd_N
+    voxel_grid_N = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(
+        pcd_N, voxel_size, graph_voxel_grid_min_bound, graph_voxel_grid_max_bound)
+    # print('voxel_grid voxel:',voxel_grid_N.get_voxels())
+    # print('voxel_grid voxel index:',[voxel.grid_index for voxel in voxel_grid_N.get_voxels()])
+    voxel_grid_index_set = set()
+    for voxel in voxel_grid_N.get_voxels():
+        voxel_grid_index_set.add(tuple(voxel.grid_index))
+    print('graph voxel index set:',voxel_grid_index_set)
+    print('length of graph voxel index:',len(voxel_grid_index_set))
+    return graph_voxel_grid_max_bound,graph_voxel_grid_min_bound,voxel_grid_index_set
