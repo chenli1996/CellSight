@@ -1,6 +1,6 @@
 from voxel_grid import *
 from point_cloud_FoV_utils import *
-
+import pandas as pd
 
 pcd_name = 'soldier'
 participant = 'P01_V1'
@@ -57,7 +57,7 @@ graph_edges,graph_edges_ingeter = get_graph_edges(original_index_to_integer_inde
 # print('graph_edges_ingeter:',graph_edges_ingeter)
 # save the graph edges to the csv file with the format of (start_node,end_node,edge_feature) and column names is 'start_node','end_node','edge_feature'
 graph_edges_df = pd.DataFrame(graph_edges,columns=['start_node','end_node','edge_feature'])
-graph_edges_df.to_csv('graph_edges.csv',index=False) 
+graph_edges_df.to_csv('./data/graph_edges.csv',index=False) 
 w
 
 
