@@ -51,20 +51,26 @@ def get_all_cell_occupied(base_path = '/Users/chenli/research/point cloud/tile_d
 
 import csv
 
-def parse_trajectory_data(file_path='./6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv',user_index='P01_V1'):
-    positions = []
-    orientations = []
-    with open(file_path, 'r') as csvfile:
-        csvreader = csv.reader(csvfile)
-        next(csvreader)  # Skip the header
-        for row in csvreader:
-            # Assuming the CSV columns are ordered as mentioned
-            # import pdb;pdb.set_trace()
-            if row[7] == user_index:                
-                positions.append([float(row[1]), float(row[2]), float(row[3])])
-                orientations.append([float(row[4]), float(row[5]), float(row[6])])
-    return np.array(positions), np.array(orientations)
+# def parse_trajectory_data(file_path='./6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv',user_index='P01_V1'):
+#     positions = []
+#     orientations = []
+#     with open(file_path, 'r') as csvfile:
+#         csvreader = csv.reader(csvfile)
+#         next(csvreader)  # Skip the header
+#         for row in csvreader:
+#             # Assuming the CSV columns are ordered as mentioned
+#             # import pdb;pdb.set_trace()
+#             if row[7] == user_index:                
+#                 positions.append([float(row[1]), float(row[2]), float(row[3])])
+#                 orientations.append([float(row[4]), float(row[5]), float(row[6])])
+#     return np.array(positions), np.array(orientations)
 
+def parse_trajectory_data(file_path='./6DoF-HMD-UserNavigationData-master/NavigationData/H1_nav.csv', user_index='P01_V1'):
+    df = pd.read_csv(file_path)
+    user_data = df[df.iloc[:, 7] == user_index]
+    positions = user_data.iloc[:, 1:4].values
+    orientations = user_data.iloc[:, 4:7].values
+    return positions, orientations
 # Function to convert Euler angles to direction vector (simplified)
 def euler_to_direction(yaw, pitch, roll):
     # Assuming yaw (Z), pitch (Y), roll (X) in radians for simplicity

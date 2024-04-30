@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 import numpy as np
 from point_cloud_FoV_utils import *
+import pandas as pd
 
 # longdress_path = '../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_1051.ply'
 # pcd = o3d.io.read_point_cloud(longdress_path)
@@ -40,7 +41,18 @@ def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds,max_bounds):
     # print('y_num:',y_num)
     # print('z_num:',z_num)
     # Find unique indices and count the occurrences
-    unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
+    # unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
+    # faster way
+    # Convert numpy array to pandas DataFrame
+    df = pd.DataFrame(voxel_indices)
+
+    # Get unique rows and counts
+    unique_df = df.drop_duplicates()
+    counts = df.value_counts().sort_index().values
+
+    # Converting back to numpy arrays
+    unique_indices = unique_df.to_numpy()
+    # counts are already a numpy array from the value_counts method
     # Combine indices and counts into a dictionary for easier access if needed
     point_counts_in_voxel = {tuple(index): count for index, count in zip(unique_indices, counts)}
     # using a single integer index to represent the voxel index
@@ -151,7 +163,9 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
     print('graph min_bound:',graph_voxel_grid_min_bound)
 
     pcd_N = randomly_add_points_in_point_cloud(
-        N=80000,min_bound=graph_voxel_grid_min_bound,max_bound=graph_voxel_grid_max_bound)
+        N=100000,min_bound=graph_voxel_grid_min_bound,max_bound=graph_voxel_grid_max_bound)
+    # pcd_N = evenly_add_points_in_point_cloud(
+        # N=100,min_bound=graph_voxel_grid_min_bound,max_bound=graph_voxel_grid_max_bound)
     # get the voxel grid for the new pcd_N
     voxel_grid_N = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(
         pcd_N, voxel_size, graph_voxel_grid_min_bound, graph_voxel_grid_max_bound)
@@ -164,6 +178,7 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
     voxel_grid_index_set = sorted(voxel_grid_index_set) 
     # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
     voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 + graph_voxel_grid_min_bound for index in voxel_grid_index_set}
+    voxel_grid_coords_array = np.array([voxel_grid_coords[index] for index in voxel_grid_index_set])
 
 
     # create a dict to map the integer index to the original index
@@ -184,6 +199,7 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
         'graph_voxel_grid_integer_index_set': voxel_grid_integer_index_set,
         'graph_voxel_grid_index_set': voxel_grid_index_set,
         'graph_voxel_grid_coords': voxel_grid_coords,
+        'graph_voxel_grid_coords_array': voxel_grid_coords_array,
         'original_index_to_integer_index': original_index_to_integer_index,
     }
 #return graph_voxel_grid_max_bound,graph_voxel_grid_min_bound,voxel_grid_integer_index_set,voxel_grid_index_set,voxel_grid_coords,original_index_to_integer_index

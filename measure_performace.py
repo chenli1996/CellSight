@@ -1,6 +1,7 @@
 import cProfile
 import pstats
 from node_feature import *
+from time import time
 
 def main():
     # your code here
@@ -12,9 +13,13 @@ if __name__ == "__main__":
     profiler = cProfile.Profile()
     profiler.enable()
     # main()
+    # start_time = time()
     generate_node_feature()
+    # print(f"Time elapsed: {time() - start_time}")
     profiler.disable()
     stats = pstats.Stats(profiler).sort_stats('cumulative')
+    # sort by total time
+    # stats.sort_stats('tottime')
     stats.print_stats(30)
 
 # To run the profiler, run the following command:

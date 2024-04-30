@@ -74,25 +74,29 @@ def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, imag
 def randomly_add_points_in_point_cloud(N,min_bound,max_bound):
     # min_bound = np.min(np.asarray(pcd.points), axis=0)
     # max_bound = np.max(np.asarray(pcd.points), axis=0)
+    # Create N new points randomly distributed in the space defined by min_bound and max_bound
     new_points = np.random.uniform(min_bound, max_bound, size=(N, 3))
-    # evenly distributed in the current point cloud space
-    # x = np.linspace(min_bound[0], max_bound[0], num=N)
-    # y = np.linspace(min_bound[1], max_bound[1], num=N)
-    # z = np.linspace(min_bound[2], max_bound[2], num=N)
-    # Create a meshgrid, which creates a rectangular grid out of the x, y, and z arrays
-    # X, Y, Z = np.meshgrid(x, y, z, indexing='ij')  # Use 'ij' indexing for Cartesian coordinate ordering
-
-    # Reshape the grids to form a list of coordinates for points in 3D space
-    # new_points = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
-
-    # new_points
-    # new_colors = np.zeros((N, 3))
-    # Create a new point cloud from the new points
+    # # Create a new point cloud from the new points
     new_pcd = o3d.geometry.PointCloud()
     new_pcd.points = o3d.utility.Vector3dVector(new_points)
     # new_pcd.colors = o3d.utility.Vector3dVector(new_colors)
     # Visualize the new point cloud
     # o3d.visualization.draw_geometries([new_pcd])
+
+    return new_pcd
+
+def evenly_add_points_in_point_cloud(N,min_bound,max_bound):
+    # evenly distributed in the current point cloud space
+    x = np.linspace(min_bound[0], max_bound[0], num=N)
+    y = np.linspace(min_bound[1], max_bound[1], num=N)
+    z = np.linspace(min_bound[2], max_bound[2], num=N)
+    # Create a meshgrid, which creates a rectangular grid out of the x, y, and z arrays
+    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')  # Use 'ij' indexing for Cartesian coordinate ordering
+    # Reshape the grids to form a list of coordinates for points in 3D space
+    new_pcd = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
+
+    # new_points
+    # new_colors = np.zeros((N, 3))
     return new_pcd
 
 def downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8):
@@ -231,7 +235,28 @@ def draw_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     return original_points,afterhpr,afterfov
 
 
-def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
+# def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
+#     data_path = "../point_cloud_data/"
+#     # shift the pcd to the X,Z plane origin with offset
+#     if point_cloud_name == 'longdress':
+#         point_cloud_path = data_path + '8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
+#         pcd = o3d.io.read_point_cloud(point_cloud_path)
+#         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,149]))#longdress
+#     elif point_cloud_name == 'loot':
+#         point_cloud_path = data_path + '8i/loot/loot/Ply/loot_vox10_'+str(1000+trajectory_index%150)+'.ply'
+#         pcd = o3d.io.read_point_cloud(point_cloud_path)
+#         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([217,0,231]))#loot
+#     elif point_cloud_name == 'redandblack':
+#         point_cloud_path = data_path + '8i/redandblack/redandblack/Ply/redandblack_vox10_'+str(1450+trajectory_index%150)+'.ply'
+#         pcd = o3d.io.read_point_cloud(point_cloud_path)
+#         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([365,0,241]))#redandblack
+#     elif point_cloud_name == 'soldier':
+#         point_cloud_path = data_path + '8i/soldier/soldier/Ply/soldier_vox10_0'+str(536+trajectory_index%150)+'.ply'
+#         pcd = o3d.io.read_point_cloud(point_cloud_path)
+#         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([228,0,198]))#soldier
+#     return pcd
+
+def get_pcd_data_original(point_cloud_name='longdress', trajectory_index=0):
     data_path = "../point_cloud_data/"
     # shift the pcd to the X,Z plane origin with offset
     if point_cloud_name == 'longdress':
@@ -250,6 +275,23 @@ def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
         point_cloud_path = data_path + '8i/soldier/soldier/Ply/soldier_vox10_0'+str(536+trajectory_index%150)+'.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
         pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([228,0,198]))#soldier
+    return pcd
+
+def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
+    # downsample and remove hidden points
+    # 
+    if point_cloud_name == 'longdress':
+        point_cloud_path = f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'loot':
+        point_cloud_path = f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'redandblack':
+        point_cloud_path = f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'soldier':
+        point_cloud_path = f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
     return pcd
     
 
@@ -321,9 +363,9 @@ def get_point_cloud_user_trajectory(pcd_name='longdress', participant='P03_V1'):
         'redandblack': 'H3_nav.csv',
         'soldier': 'H4_nav.csv'
     }
-    file_name = file_mapping.get(pcd_name)
-    if file_name is None:
-        raise ValueError(f"Invalid point cloud name: {pcd_name}")
+    file_name = file_mapping[pcd_name]
+    # if file_name is None:
+        # raise ValueError(f"Invalid point cloud name: {pcd_name}")
     positions, orientations = parse_trajectory_data(data_path + file_name, user_index=participant)
     # get the centroid of the positions
 

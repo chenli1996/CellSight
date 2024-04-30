@@ -3,15 +3,15 @@ from point_cloud_FoV_utils import *
 import pandas as pd
 from tqdm import tqdm
 
-pcd_name = 'soldier'
+pcd_name = 'longdress'
 participant = 'P01_V1'
 # trajectory_index = 0
 image_width, image_height = np.array([1920, 1080])
 # generate graph voxel grid features
-voxel_size = int(256*2)
+voxel_size = int(256/2)
 min_bounds = np.array([-251,    0, -241]) 
 max_bounds = np.array([ 262, 1023,  511])
-prefix = f'voxel_size{voxel_size}'
+prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
 # get the graph max and min bounds
 # graph_max_bound,graph_min_bound,graph_voxel_grid_integer_index_set,graph_voxel_grid_index_set,graph_voxel_grid_coords,original_index_to_integer_index = voxelizetion_para(
     # voxel_size=voxel_size, min_bounds=min_bounds, max_bounds=max_bounds)
@@ -22,7 +22,9 @@ graph_min_bound = results['graph_voxel_grid_min_bound']
 graph_voxel_grid_integer_index_set = results['graph_voxel_grid_integer_index_set']
 graph_voxel_grid_index_set = results['graph_voxel_grid_index_set']
 graph_voxel_grid_coords = results['graph_voxel_grid_coords']
+graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
 original_index_to_integer_index = results['original_index_to_integer_index']
+
 
 # write a function to get graph edges, which is node index pair, based on the voxel grid index set, the graph is a 3D grid graph
 def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
@@ -85,7 +87,7 @@ def generate_node_feature():
     coordinate_feature = []
 
 
-    for trajectory_index in tqdm(range(0, 10)):
+    for trajectory_index in tqdm(range(0, 150)):
         # print(f'Processing trajectory {trajectory_index}...')
         # Load the point cloud data
         pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
@@ -105,7 +107,7 @@ def generate_node_feature():
 
 
 
-        pcd = pcd.voxel_down_sample(voxel_size=8)
+        # pcd = pcd.voxel_down_sample(voxel_size=8)
         # get the occupancy feature
         occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
         # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
@@ -131,20 +133,29 @@ def generate_node_feature():
         in_FoV_feature.append(in_FoV_voxel_percentage_array)
         occlusion_feature.append(occulusion_array)
         node_index.append(graph_voxel_grid_integer_index_set)
+        coordinate_feature.append(graph_voxel_grid_coords_array)
+        distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
     # save the features to the csv file
     occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
     in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)
     occlusion_feature = np.array(occlusion_feature).reshape(-1,1)
     node_index = np.array(node_index).reshape(-1,1)
+    coordinate_feature = np.array(coordinate_feature).reshape(-1,3)
+    distance_feature = np.array(distance_feature).reshape(-1,1)
     # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
-    node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,node_index),axis=1)
-    node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','node_index'])
+    node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,coordinate_feature,distance_feature,node_index),axis=1)
+    node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
+    if not os.path.exists(f'./data/{prefix}'):
+        os.makedirs(f'./data/{prefix}')
     node_feature_df.to_csv(f'./data/{prefix}/node_feature.csv')
 
 
+
+
 if __name__ == '__main__':
-    generate_graph()
+    # generate_graph()
     generate_node_feature()
+    # downsample_binary_pcd_data()
 
 
 
