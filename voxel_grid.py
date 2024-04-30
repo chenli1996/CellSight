@@ -30,20 +30,28 @@ def test():
     # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
     voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 for index in voxel_counts.keys()}
 
-def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds):
+def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds,max_bounds):
     # Get the points and their indices
     points = np.asarray(pcd.points).copy()
     points -= min_bounds
     voxel_indices = np.floor(points / voxel_size).astype(int)
-    
+    x_num,y_num,z_num = ((max_bounds - min_bounds + 1) / voxel_size).astype(int)
+    # print('x_num:',x_num)
+    # print('y_num:',y_num)
+    # print('z_num:',z_num)
     # Find unique indices and count the occurrences
     unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
     # Combine indices and counts into a dictionary for easier access if needed
     point_counts_in_voxel = {tuple(index): count for index, count in zip(unique_indices, counts)}
+    # using a single integer index to represent the voxel index
+    point_counts_in_voxel_integer = {index[0]*y_num*z_num + index[1]*z_num + index[2]: count for index, count in zip(unique_indices, counts)}
+    # build a dict to map the integer index to the original index
+    # integer_index_to_original_index = {index[0]*y_num*z_num + index[1]*z_num + index[2]: index for index in unique_indices}
+    # print('integer_index_to_original_index:',integer_index_to_original_index)
     # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
     voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 + min_bounds for index in point_counts_in_voxel.keys()}
     # import pdb; pdb.set_trace()
-    return point_counts_in_voxel, voxel_grid_coords
+    return point_counts_in_voxel_integer, voxel_grid_coords
 
 
 # Function to create a wireframe cube at a given location with a given size
@@ -153,10 +161,32 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
     for voxel in voxel_grid_N.get_voxels():
         voxel_grid_index_set.add(tuple(voxel.grid_index))
     # sort the set
-    voxel_grid_index_set = sorted(voxel_grid_index_set)
+    voxel_grid_index_set = sorted(voxel_grid_index_set) 
+    # get the voxel grid coordinates, which is the center of the voxel grid and voxel_grid_coords is a dict
+    voxel_grid_coords = {tuple(index): np.array(index) * voxel_size + voxel_size / 2 + graph_voxel_grid_min_bound for index in voxel_grid_index_set}
+
+
+    # create a dict to map the integer index to the original index
+    x_num,y_num,z_num = ((graph_voxel_grid_max_bound - graph_voxel_grid_min_bound + 1) / voxel_size).astype(int)
+    original_index_to_integer_index = {index : index[0]*y_num*z_num + index[1]*z_num + index[2] for index in voxel_grid_index_set}
+    print('original_index_to_integer_index:',original_index_to_integer_index)
+    # convert the index to a singel integer index
+    voxel_grid_integer_index_set = [index[0]*y_num*z_num + index[1]*z_num + index[2] for index in voxel_grid_index_set]
+    # original index set
+    voxel_grid_index_set = [index for index in voxel_grid_index_set]
+
     print('graph voxel index set:',voxel_grid_index_set)
+    print('graph voxel integer index set:',voxel_grid_integer_index_set)
     print('length of graph voxel index:',len(voxel_grid_index_set))
-    return graph_voxel_grid_max_bound,graph_voxel_grid_min_bound,voxel_grid_index_set
+    return {
+        'graph_voxel_grid_max_bound': graph_voxel_grid_max_bound,
+        'graph_voxel_grid_min_bound': graph_voxel_grid_min_bound,
+        'graph_voxel_grid_integer_index_set': voxel_grid_integer_index_set,
+        'graph_voxel_grid_index_set': voxel_grid_index_set,
+        'graph_voxel_grid_coords': voxel_grid_coords,
+        'original_index_to_integer_index': original_index_to_integer_index,
+    }
+#return graph_voxel_grid_max_bound,graph_voxel_grid_min_bound,voxel_grid_integer_index_set,voxel_grid_index_set,voxel_grid_coords,original_index_to_integer_index
 
 
 def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
@@ -164,11 +194,11 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
 # uniformly distrubute the points in the whole space and generate a new pcd
     pcd_N = randomly_add_points_in_point_cloud(
         N=100000,min_bound=graph_min_bound,max_bound=graph_max_bound)
-    point_counts_in_voxel_full, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound)
+    point_counts_in_voxel_full, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
 
     # get the points in the FoV
     pcd_N = get_points_in_FoV(pcd_N, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
-    point_counts_in_voxel_FoV, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound)
+    point_counts_in_voxel_FoV, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
 
     in_FoV_voxel_percentage_dict = {}
     for voxel_index in point_counts_in_voxel_full:
@@ -181,14 +211,14 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
     
     return in_FoV_voxel_percentage_dict,pcd_N
 
-def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_voxel_grid_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
+def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
     # pcd = pcd.voxel_down_sample(voxel_size=8)
-    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound)
+    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     # get the points in the FoV
     pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
     # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=4)
     pcd = hidden_point_removal(pcd,para_eye)
-    point_counts_in_voxel_hpr, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound)
+    point_counts_in_voxel_hpr, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     occlusion_level_dict = {}
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel_hpr:
@@ -200,8 +230,8 @@ def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_voxel_grid_index
     occlusion_level_dict = {k: round(v,2) for k, v in occlusion_level_dict.items()}
     return occlusion_level_dict,pcd
 
-def get_occupancy_feature(pcd,graph_min_bound,graph_voxel_grid_index_set,voxel_size):
-    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound)
+def get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size):
+    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     occupancy_dict = {}
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel:
@@ -211,7 +241,7 @@ def get_occupancy_feature(pcd,graph_min_bound,graph_voxel_grid_index_set,voxel_s
     return occupancy_dict
 
 # visualize the voxel grid
-def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye):
+def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye,voxel_grid_index_set,voxel_grid_coords):
     # add a coordinate frame at the min bound
     coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=graph_min_bound)
     # add a sphere at the eye position
@@ -221,6 +251,11 @@ def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye
     sphere.paint_uniform_color([1,0,0])
     # get the visualization of the voxel grid line set
     line_sets_all_space = line_sets_from_voxel_grid_space(graph_min_bound, graph_max_bound, voxel_size)
+    
+
+
+
+
     # visualize the voxel grid
     o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame])
     # o3d.visualization.draw_geometries([colored_pcd,*line_sets_all_space,coordinate_frame,sphere])
