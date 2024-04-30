@@ -201,15 +201,18 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
     point_counts_in_voxel_FoV, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
 
     in_FoV_voxel_percentage_dict = {}
+    in_FoV_voxel_percentage_array = []
     for voxel_index in point_counts_in_voxel_full:
         if voxel_index in point_counts_in_voxel_FoV:
             in_FoV_voxel_percentage_dict[voxel_index] = point_counts_in_voxel_FoV[voxel_index]/point_counts_in_voxel_full[voxel_index]
+            in_FoV_voxel_percentage_array.append(point_counts_in_voxel_FoV[voxel_index]/point_counts_in_voxel_full[voxel_index])
         else:
             in_FoV_voxel_percentage_dict[voxel_index] = 0
+            in_FoV_voxel_percentage_array.append(0)
     # print('in_FoV_voxel_percentage_dict:',in_FoV_voxel_percentage_dict)
     # round the in_FoV voxel percentage to 2 decimal
     
-    return in_FoV_voxel_percentage_dict,pcd_N
+    return in_FoV_voxel_percentage_dict,in_FoV_voxel_percentage_array,pcd_N
 
 def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
     # pcd = pcd.voxel_down_sample(voxel_size=8)
@@ -220,25 +223,31 @@ def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_
     pcd = hidden_point_removal(pcd,para_eye)
     point_counts_in_voxel_hpr, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     occlusion_level_dict = {}
+    occlusion_array = []
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel_hpr:
             occlusion_level_dict[voxel_index] = point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index]
+            occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
         else:
             occlusion_level_dict[voxel_index] = 0
+            occlusion_array.append(0)
     # print('occlusion_level_dict:',occlusion_level_dict)
     # round the occlusion level to 2 decimal
     occlusion_level_dict = {k: round(v,2) for k, v in occlusion_level_dict.items()}
-    return occlusion_level_dict,pcd
+    return occlusion_level_dict,occlusion_array,pcd
 
 def get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size):
     point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     occupancy_dict = {}
+    occupancy_array = []
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel:
             occupancy_dict[voxel_index] = point_counts_in_voxel[voxel_index]
+            occupancy_array.append(point_counts_in_voxel[voxel_index])
         else:
             occupancy_dict[voxel_index] = 0
-    return occupancy_dict
+            occupancy_array.append(0)
+    return occupancy_dict,occupancy_array
 
 # visualize the voxel grid
 def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye,voxel_grid_index_set,voxel_grid_coords):
