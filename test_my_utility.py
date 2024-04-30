@@ -75,6 +75,28 @@ def test_pcd_min_max_bound():
         # Max bound for all: [ 262. 1023.  511.]
         
         
+def octree_test(depth=9):
+    pcd_name ='longdress'
+    pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=0)
+    octree = o3d.geometry.Octree(max_depth=depth)
+    octree.convert_from_point_cloud(pcd)
+    # # get the different levels of the octree and visualize as a point cloud
+    # voxel_grid_points = []
+    # for i in range(depth):
+    #     voxel_grid_points += octree.get_voxel_centers(i)
+    # voxel_grid_points = np.array(voxel_grid_points)
+    # print(f'Number of voxel grid points: {voxel_grid_points.shape}')
+    
+
+
+    # visualize the voxel grid points as a point cloud
+    # voxel_pcd = o3d.geometry.PointCloud()
+    # voxel_pcd.points = o3d.utility.Vector3dVector(voxel_grid_points)
+    # visualize the voxel grid points
+    # o3d.visualization.draw_geometries([voxel_pcd])
+    # visualize the octree
+    o3d.visualization.draw_geometries([octree])
+    # o3d.visualization.draw_geometries([pcd])
 
 
 
@@ -82,5 +104,8 @@ if __name__ == '__main__':
     # test_voxel_size()
     # test_FoV_centroid()
     # test_pcd_centroid()
-    test_pcd_min_max_bound()
+    # test_pcd_min_max_bound()
+    for depth in range(3, 10 ,3):
+        octree_test(depth)
+    # octree_test(6)
     print('Done')

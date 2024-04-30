@@ -107,6 +107,15 @@ def downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8):
     down_pcd_remove = down_pcd.select_by_index(pt_map)
     return down_pcd_remove
 
+def hidden_point_removal(pcd,para_eye):
+    centroid = [0,500,0]
+    # get L2 norm of the vector
+    radius = np.linalg.norm(np.array(para_eye)-np.array(centroid))*1000
+    # remove hidden points
+    _, pt_map = pcd.hidden_point_removal(para_eye,radius)
+    pcd_remove = pcd.select_by_index(pt_map)
+    return pcd_remove
+
 def downsampele_hidden_point_removal_trace(pcd, para_eye, voxel_size=8, min_bound=None, max_bound=None, approximate_class=False):
     # downsample and remove hidden points
     centeriod = [0,500,0]
