@@ -12,6 +12,7 @@ voxel_size = int(256/2)
 min_bounds = np.array([-251,    0, -241]) 
 max_bounds = np.array([ 262, 1023,  511])
 prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
+edge_prefix = str(voxel_size)
 # get the graph max and min bounds
 # graph_max_bound,graph_min_bound,graph_voxel_grid_integer_index_set,graph_voxel_grid_index_set,graph_voxel_grid_coords,original_index_to_integer_index = voxelizetion_para(
     # voxel_size=voxel_size, min_bounds=min_bounds, max_bounds=max_bounds)
@@ -57,22 +58,22 @@ def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
 
 def generate_graph():   
     # if graph_edges_integer_index.csv exists, then load the graph_edges from the csv file
-    if os.path.exists(f'./data/{prefix}/graph_edges_integer_index.csv'):
-        graph_edges_df_integer = pd.read_csv(f'./data/{prefix}/graph_edges_integer_index.csv')
+    if os.path.exists(f'./data/{edge_prefix}/graph_edges_integer_index.csv'):
+        graph_edges_df_integer = pd.read_csv(f'./data/{edge_prefix}/graph_edges_integer_index.csv')
         # graph_edges_ingeter = graph_edges_df_integer.values
         graph_edges_ingeter = graph_edges_df_integer[['start_node','end_node','edge_feature']].values
-        graph_edges_df = pd.read_csv(f'./data/{prefix}/graph_edges_voxel_index.csv')
+        graph_edges_df = pd.read_csv(f'./data/{edge_prefix}/graph_edges_voxel_index.csv')
         graph_edges = graph_edges_df[['start_node','end_node','edge_feature']].values
     else:
         # mkdir the data folder
-        if not os.path.exists(f'./data/{prefix}'):
-            os.makedirs(f'./data/{prefix}')
+        if not os.path.exists(f'./data/{edge_prefix}'):
+            os.makedirs(f'./data/{edge_prefix}')
         graph_edges,graph_edges_ingeter = get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords)
         graph_edges_df = pd.DataFrame(graph_edges,columns=['start_node','end_node','edge_feature'])
-        graph_edges_df.to_csv(f'./data/{prefix}/graph_edges_voxel_index.csv',index=False) 
+        graph_edges_df.to_csv(f'./data/{edge_prefix}/graph_edges_voxel_index.csv',index=False) 
         # save the graph_edge_integer to the csv file with the format of (start_node,end_node,edge_feature) and column names is 'start_node','end_node','edge_feature'
         graph_edges_df_integer = pd.DataFrame(graph_edges_ingeter,columns=['start_node','end_node','edge_feature'])
-        graph_edges_df_integer.to_csv(f'./data/{prefix}/graph_edges_integer_index.csv')
+        graph_edges_df_integer.to_csv(f'./data/{edge_prefix}/graph_edges_integer_index.csv')
 
     # print(graph_edges_df)
     # print(graph_edges_df_integer)
