@@ -41,17 +41,17 @@ def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds,max_bounds):
     # print('y_num:',y_num)
     # print('z_num:',z_num)
     # Find unique indices and count the occurrences
-    # unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
+    unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
     # faster way
     # Convert numpy array to pandas DataFrame
-    df = pd.DataFrame(voxel_indices)
+    # df = pd.DataFrame(voxel_indices)
 
-    # Get unique rows and counts
-    unique_df = df.drop_duplicates()
-    counts = df.value_counts().sort_index().values
+    # # Get unique rows and counts
+    # unique_df = df.drop_duplicates()
+    # counts = df.value_counts().sort_index().values
 
-    # Converting back to numpy arrays
-    unique_indices = unique_df.to_numpy()
+    # # Converting back to numpy arrays
+    # unique_indices = unique_df.to_numpy()
     # counts are already a numpy array from the value_counts method
     # Combine indices and counts into a dictionary for easier access if needed
     point_counts_in_voxel = {tuple(index): count for index, count in zip(unique_indices, counts)}
@@ -236,21 +236,28 @@ def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_
     # get the points in the FoV
     pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
     # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=4)
-    pcd = hidden_point_removal(pcd,para_eye)
-    point_counts_in_voxel_hpr, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
+    pcd_hpr = hidden_point_removal(pcd,para_eye)
+    point_counts_in_voxel_hpr, _ = get_number_of_points_in_voxel_grid(pcd_hpr,voxel_size,graph_min_bound,graph_max_bound)
     occlusion_level_dict = {}
     occlusion_array = []
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel_hpr:
             occlusion_level_dict[voxel_index] = point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index]
             occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
+            if occlusion_array[-1] > 1:
+                print('occlusion_array:',occlusion_array[-1],voxel_index)
+                # print('point_counts_in_voxel_hpr:',point_counts_in_voxel_hpr[voxel_index])
+                # print('point_counts_in_voxel:',point_counts_in_voxel[voxel_index])
+                # import pdb; pdb.set_trace()
         else:
             occlusion_level_dict[voxel_index] = 0
             occlusion_array.append(0)
     # print('occlusion_level_dict:',occlusion_level_dict)
     # round the occlusion level to 2 decimal
     occlusion_level_dict = {k: round(v,2) for k, v in occlusion_level_dict.items()}
-    return occlusion_level_dict,occlusion_array,pcd
+    # o3d.visualization.draw_geometries([pcd])
+    # o3d.visualization.draw_geometries([pcd_hpr])
+    return occlusion_level_dict,occlusion_array,pcd_hpr
 
 def get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size):
     point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
@@ -266,7 +273,7 @@ def get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_i
     return occupancy_dict,occupancy_array
 
 # visualize the voxel grid
-def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye,voxel_grid_index_set,voxel_grid_coords):
+def visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,para_eye,voxel_grid_index_set,voxel_grid_coords):
     # add a coordinate frame at the min bound
     coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=300, origin=graph_min_bound)
     # add a sphere at the eye position
@@ -282,6 +289,6 @@ def visualize_voxel_grid(pcd,graph_min_bound,graph_max_bound,voxel_size,para_eye
 
 
     # visualize the voxel grid
-    o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame])
+    o3d.visualization.draw_geometries([pcd,pcd_hpr,*line_sets_all_space,coordinate_frame])
     # o3d.visualization.draw_geometries([colored_pcd,*line_sets_all_space,coordinate_frame,sphere])
     # o3d.visualization.draw_geometries([voxel_grid,*line_sets_all_space,coordinate_frame,sphere])
