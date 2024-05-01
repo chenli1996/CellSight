@@ -79,7 +79,7 @@ def generate_graph():
     # print(graph_edges_df_integer)
 
 def generate_node_feature():
-    for user_i in tqdm(range(20,28)):
+    for user_i in tqdm(range(1,28)):
         participant = 'P'+str(user_i).zfill(2)+'_V1'
         node_index = []
         occupancy_feature = []
@@ -87,14 +87,14 @@ def generate_node_feature():
         occlusion_feature = []
         distance_feature = []
         coordinate_feature = []
+        positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
 
-
-        for trajectory_index in tqdm(range(0, 150)):
+        for trajectory_index in tqdm(range((len(positions)))):
             # print(f'Processing trajectory {trajectory_index}...')
             # Load the point cloud data
-            pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+            pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index%150)
             # get the position and orientation for the given participant and trajectory index
-            positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
+            
             position = positions[trajectory_index]
             orientation = orientations[trajectory_index]
             para_eye = [i*1024/1.8 for i in position]
