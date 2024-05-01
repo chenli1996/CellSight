@@ -3,7 +3,7 @@ from point_cloud_FoV_utils import *
 import pandas as pd
 from tqdm import tqdm
 
-pcd_name = 'longdress'
+pcd_name = 'soldier'
 # participant = 'P01_V1'
 # trajectory_index = 0
 image_width, image_height = np.array([1920, 1080])
