@@ -7,6 +7,7 @@
 #SBATCH --mem=32GB
 #SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=torch
+#SBATCH --output=./log/slurm_%j.out
 
 module purge
 
