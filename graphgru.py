@@ -55,6 +55,7 @@ def getdata_normalize(file_name,data_type):
     for feature in data_type:
         x_2 = df[feature].to_numpy()
         x_list.append((x_2 - min(x_2)) / (max(x_2) - min(x_2)))
+        # x_list.append(x_2)
 
 
     #x_3= df[data_type[2]].to_numpy()
@@ -71,6 +72,10 @@ def get_train_data(data,history,future):
        data_y.append(data[i+history:i+history+future])
     data_x=np.array(data_x)
     data_y=np.array(data_y)
+    # data_y only get the third column feature of the last dim, from shape (batch size, 3, 240, 7)
+    # to (batch size, 3, 240)
+    data_y = data_y[:,:,:,1:3]#only occlusion feature
+
     size1 = int(len(data_x) * 0.8)
     size2 = int(len(data_x) * 1)
     train_x = data_x[:size1]
@@ -79,6 +84,7 @@ def get_train_data(data,history,future):
     test_y = data_y[size1:size2]
     val_x = data_x[size2:]
     val_y = data_y[size2:]
+    # import pdb;pdb.set_trace()
     # train_x = np.expand_dims(train_x,axis=-1)
     # train_y = np.expand_dims(train_y,axis=-1)
     # test_x = np.expand_dims(test_x,axis=-1)
@@ -93,16 +99,22 @@ voxel_size = int(256/2)
 prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
 node_feature_path = f'./data/{prefix}/node_feature.csv'
 column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+# column_name ['occlusion_feature']
 a1,a2=getdata_normalize(node_feature_path,column_name)
-x=np.array(list(zip(a1)))
+# x=np.array(list(zip(a1)))
 # x=np.array(list(zip(a2)))
+x=np.array(a2)
 # x=x.reshape(1440,301,1)
 feature_num = len(column_name)
-feature_num = 1
+# feature_num = 1
 print('feature_num:',feature_num)
-x=x.reshape(150,240,feature_num)
+
+
+x=x.reshape(feature_num,150,240)
+x=x.transpose(1,2,0)
 
 history,future=10,3
+# history,future=2,1
 train_x,train_y,test_x,test_y,val_x,val_y=get_train_data(x,history,future)
 
 train_x = torch.from_numpy(train_x)
@@ -111,7 +123,7 @@ test_x = torch.from_numpy(test_x)
 test_y = torch.from_numpy(test_y)
 
 
-batch_size=200
+batch_size=32
 train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
 test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -128,7 +140,7 @@ class GRULinear(nn.Module):
         self._output_dim = output_dim
         self._bias_init_value = bias
         self.weights = nn.Parameter(
-            torch.DoubleTensor(self._num_gru_units + 1, self._output_dim)
+            torch.DoubleTensor(self._num_gru_units + feature_num, self._output_dim)
         )
         self.biases = nn.Parameter(torch.FloatTensor(self._output_dim))
         self.reset_parameters()
@@ -140,10 +152,9 @@ class GRULinear(nn.Module):
     def forward(self, inputs, hidden_state):
         num_nodes=240
         batch_size = hidden_state.shape[0]
-        assert batch_size == 200
-        inputs = inputs.reshape((batch_size, num_nodes, 1))
-        # inputs (batch_size, num_nodes, 1)
-        inputs = inputs.reshape((batch_size, num_nodes, 1))
+        # assert batch_size == 200
+        inputs = inputs.reshape((batch_size, num_nodes, feature_num))
+        # inputs (batch_size, num_nodes, feature_num)
         # hidden_state (batch_size, num_nodes, num_gru_units)
         hidden_state = hidden_state.reshape(
             (batch_size, num_nodes, self._num_gru_units)
@@ -151,7 +162,7 @@ class GRULinear(nn.Module):
         # [inputs, hidden_state] "[x, h]" (batch_size, num_nodes, num_gru_units + 1)
         concatenation = torch.cat((inputs, hidden_state), dim=2)
         # [x, h] (batch_size * num_nodes, gru_units + 1)
-        concatenation = concatenation.reshape((-1, self._num_gru_units + 1))
+        concatenation = concatenation.reshape((-1, self._num_gru_units + feature_num))
         # [x, h]W + b (batch_size * num_nodes, output_dim)
         outputs = concatenation @ self.weights + self.biases
         # [x, h]W + b (batch_size, num_nodes, output_dim)
@@ -228,6 +239,7 @@ class GraphGRUCell(nn.Module):
     def _gc3(self, state, inputs, output_size, bias_start=0.0):
 
         batch_size = state.shape[0]
+        # assert batch_size == 200
         # import pdb;pdb.set_trace()
 
         state = torch.reshape(state, (batch_size, self.num_nodes, -1))  # (batch, self.num_nodes, self.gru_units)
@@ -251,11 +263,11 @@ class GraphGRUCell(nn.Module):
 
 
 class GraphGRU(nn.Module):
-    def __init__(self,future, input_size, hidden_size, num_layers,inputwindow):
+    def __init__(self,future, input_size, hidden_size, output_dim,inputwindow):
         super(GraphGRU, self).__init__()
         self.num_nodes = 240
         self.input_dim =input_size
-        self.output_dim = 1
+        self.output_dim = output_dim
         self.gru_units = hidden_size
 
         self.input_window = inputwindow
@@ -285,6 +297,7 @@ class GraphGRU(nn.Module):
         # labels = batch['y']
 
         batch_size, input_window, num_nodes, input_dim = inputs.shape
+        # assert batch_size == 200
         inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
         inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device)
         state = torch.zeros(batch_size, self.num_nodes * self.gru_units).to(self.device)
@@ -318,9 +331,9 @@ class GraphGRU(nn.Module):
     #  a.to(self.device)
 input_size = feature_num
 if not torch.cuda.is_available():
-    mymodel = GraphGRU(future,feature_num,100,1,history)
+    mymodel = GraphGRU(future,feature_num,100,2,history)
 else:
-    mymodel=GraphGRU(future,feature_num,100,1,history).cuda()
+    mymodel=GraphGRU(future,feature_num,100,2,history).cuda()
 print(mymodel)
 num_epochs=100
 learning_rate=0.0003
@@ -341,6 +354,7 @@ for epochs in range(num_epochs):
      else:
         batch_x=batch_x
         batch_y=batch_y
+    #  import pdb;pdb.set_trace()   
      outputs = mymodel(batch_x)
     #  import pdb;pdb.set_trace()
      # clear the gradients
