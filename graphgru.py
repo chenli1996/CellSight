@@ -1,3 +1,4 @@
+#!/bin/env python
 import pandas as pd
 import numpy as np
 import torch
@@ -93,12 +94,12 @@ def get_train_data(data,history,future):
     # val_x = np.expand_dims(val_x,axis=-1)
     # val_y = np.expand_dims(val_y,axis=-1)
     return train_x,train_y,test_x,test_y,val_x,val_y
-history,future=60,60
+history,future=150,60
 voxel_size = int(256/2)
 pcd_name = 'soldier'
 # participant = 'P01_V1'
 train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-for user_i in tqdm(range(1,19)):
+for user_i in tqdm(range(1,17)):
     participant = 'P'+str(user_i).zfill(2)+'_V1'
     # generate graph voxel grid features
     prefix = f'{pcd_name}_VS{voxel_size}'
