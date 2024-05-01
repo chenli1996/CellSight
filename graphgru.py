@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import random
 from torch.utils.data import DataLoader
-
+import pickle
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -74,7 +74,7 @@ def get_train_data(data,history,future):
     data_y=np.array(data_y)
     # data_y only get the third column feature of the last dim, from shape (batch size, 3, 240, 7)
     # to (batch size, 3, 240)
-    data_y = data_y[:,:,:,1:3]#only occlusion feature
+    data_y = data_y[:,:,:,2:3]#only occlusion feature
 
     size1 = int(len(data_x) * 0.8)
     size2 = int(len(data_x) * 1)
@@ -330,12 +330,13 @@ class GraphGRU(nn.Module):
 # write a cpu model for testing
     #  a.to(self.device)
 input_size = feature_num
+out_size = 1
 if not torch.cuda.is_available():
-    mymodel = GraphGRU(future,feature_num,100,2,history)
+    mymodel = GraphGRU(future,feature_num,100,out_size,history)
 else:
-    mymodel=GraphGRU(future,feature_num,100,2,history).cuda()
+    mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
 print(mymodel)
-num_epochs=100
+num_epochs=30
 learning_rate=0.0003
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -392,17 +393,21 @@ with torch.no_grad():
           real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
         MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
         MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-        MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+        
+        # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+        MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+
         MAE+=MAE_d
         MAPE+=MAPE_d
         MSE+=MSE_d
         BAT_+=1
      print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % (30*(u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
      if u==2:
-           np.save('history',history)
-           np.save('real',real)
-           np.save('prediction',prediction)
-
-
-
+        # import pdb; pdb.set_trace()
+        with open('history.pkl', 'wb') as f:
+            pickle.dump(history, f)
+        with open('real.pkl', 'wb') as f:
+            pickle.dump(real, f) 
+        with open('prediction.pkl', 'wb') as f:
+            pickle.dump(prediction, f)    
 
