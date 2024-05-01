@@ -92,30 +92,44 @@ def get_train_data(data,history,future):
     # val_x = np.expand_dims(val_x,axis=-1)
     # val_y = np.expand_dims(val_y,axis=-1)
     return train_x,train_y,test_x,test_y,val_x,val_y
-pcd_name = 'longdress'
-participant = 'P01_V1'
-# generate graph voxel grid features
-voxel_size = int(256/2)
-prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
-node_feature_path = f'./data/{prefix}/node_feature.csv'
-column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
-# column_name ['occlusion_feature']
-a1,a2=getdata_normalize(node_feature_path,column_name)
-# x=np.array(list(zip(a1)))
-# x=np.array(list(zip(a2)))
-x=np.array(a2)
-# x=x.reshape(1440,301,1)
-feature_num = len(column_name)
-# feature_num = 1
-print('feature_num:',feature_num)
-
-
-x=x.reshape(feature_num,150,240)
-x=x.transpose(1,2,0)
-
 history,future=10,3
-# history,future=2,1
-train_x,train_y,test_x,test_y,val_x,val_y=get_train_data(x,history,future)
+voxel_size = int(256/2)
+pcd_name = 'soldier'
+# participant = 'P01_V1'
+train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+for user_i in tqdm(range(1,3)):
+    participant = 'P'+str(user_i).zfill(2)+'_V1'
+    # generate graph voxel grid features
+    prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
+    node_feature_path = f'./data/{prefix}/node_feature.csv'
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    # column_name ['occlusion_feature']
+    a1,a2=getdata_normalize(node_feature_path,column_name)
+    # x=np.array(list(zip(a1)))
+    # x=np.array(list(zip(a2)))
+    x=np.array(a2)
+    # x=x.reshape(1440,301,1)
+    feature_num = len(column_name)
+    # feature_num = 1
+    print('feature_num:',feature_num)
+    x=x.reshape(feature_num,150,240)
+    x=x.transpose(1,2,0)
+    train_x1,train_y1,test_x1,test_y1,val_x1,val_y1=get_train_data(x,history,future)
+    train_x.append(train_x1)
+    train_y.append(train_y1)
+    test_x.append(test_x1)
+    test_y.append(test_y1)
+    val_x.append(val_x1)
+    val_y.append(val_y1)
+train_x = np.concatenate(train_x)
+train_y = np.concatenate(train_y)
+test_x = np.concatenate(test_x)
+test_y = np.concatenate(test_y)
+val_x = np.concatenate(val_x)
+val_y = np.concatenate(val_y)
+
+
+
 
 train_x = torch.from_numpy(train_x)
 train_y = torch.from_numpy(train_y)
