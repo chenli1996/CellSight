@@ -350,7 +350,7 @@ if not torch.cuda.is_available():
 else:
     mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
 print(mymodel)
-num_epochs=30
+num_epochs=100
 learning_rate=0.0003
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
