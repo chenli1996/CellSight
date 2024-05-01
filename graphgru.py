@@ -99,7 +99,7 @@ voxel_size = int(256/2)
 pcd_name = 'soldier'
 # participant = 'P01_V1'
 train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-for user_i in tqdm(range(1,17)):
+for user_i in tqdm(range(1,16)):
     participant = 'P'+str(user_i).zfill(2)+'_V1'
     # generate graph voxel grid features
     prefix = f'{pcd_name}_VS{voxel_size}'
@@ -418,12 +418,12 @@ with torch.no_grad():
         MSE+=MSE_d
         BAT_+=1
      print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % (30*(u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
-     if u==2:
-        # import pdb; pdb.set_trace()
-        with open('history.pkl', 'wb') as f:
-            pickle.dump(history, f)
-        with open('real.pkl', 'wb') as f:
-            pickle.dump(real, f) 
-        with open('prediction.pkl', 'wb') as f:
-            pickle.dump(prediction, f)    
+    #  if u==2:
+    #     # import pdb; pdb.set_trace()
+    #     with open('history.pkl', 'wb') as f:
+    #         pickle.dump(history, f)
+    #     with open('real.pkl', 'wb') as f:
+    #         pickle.dump(real, f) 
+    #     with open('prediction.pkl', 'wb') as f:
+    #         pickle.dump(prediction, f)    
 
