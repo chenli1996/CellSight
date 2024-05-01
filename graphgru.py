@@ -12,6 +12,7 @@ from torchmetrics import MeanAbsolutePercentageError
 from torchmetrics import MeanSquaredError
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
+from tqdm import tqdm
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 # def getedge(x,edge_number):
@@ -92,16 +93,16 @@ def get_train_data(data,history,future):
     # val_x = np.expand_dims(val_x,axis=-1)
     # val_y = np.expand_dims(val_y,axis=-1)
     return train_x,train_y,test_x,test_y,val_x,val_y
-history,future=10,3
+history,future=60,60
 voxel_size = int(256/2)
 pcd_name = 'soldier'
 # participant = 'P01_V1'
 train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-for user_i in tqdm(range(1,3)):
+for user_i in tqdm(range(1,19)):
     participant = 'P'+str(user_i).zfill(2)+'_V1'
     # generate graph voxel grid features
-    prefix = f'{pcd_name}_{participant}_VS{voxel_size}'
-    node_feature_path = f'./data/{prefix}/node_feature.csv'
+    prefix = f'{pcd_name}_VS{voxel_size}'
+    node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     # column_name ['occlusion_feature']
     a1,a2=getdata_normalize(node_feature_path,column_name)
