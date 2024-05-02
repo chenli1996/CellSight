@@ -396,7 +396,7 @@ class GraphGRU(nn.Module):
 
 
 train_start = 1
-train_end = 15
+train_end = 21
 test_start = 21
 test_end = 26
 val_start = 27
