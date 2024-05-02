@@ -12,11 +12,11 @@ from torchmetrics import MeanAbsoluteError
 from torchmetrics import MeanAbsolutePercentageError
 from torchmetrics import MeanSquaredError
 from torch_geometric.nn import GATConv
-from torch_geometric.data import Data
+from torch_geometric.data import Data,Batch
 from tqdm import tqdm
 from time import time
-torch.set_default_tensor_type(torch.DoubleTensor)
 
+torch.set_default_tensor_type(torch.DoubleTensor)
 # def getedge(x,edge_number):
 #     df = pd.read_csv(x, nrows=edge_number)
 #     r1 = df.loc[:, 'row'].values
@@ -143,12 +143,12 @@ def get_train_test_split_user():
 
 def get_train_test_data_on_users(history,future):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    train_start = 1
-    train_end = 21
-    test_start = 21
-    test_end = 26
-    val_start = 27
-    val_end = 28
+    # train_start = 1
+    # train_end = 5
+    # test_start = 21
+    # test_end = 26 -3
+    # val_start = 27
+    # val_end = 28
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     # column_name ['occlusion_feature']
     def get_train_test_data(train_start,train_end):
@@ -309,11 +309,23 @@ class GraphGRUCell(nn.Module):
         edge_index = torch.tensor(np.stack((np.array(self.r1),np.array(self.r2))), dtype=torch.long).to(self.device)
         # import pdb;pdb.set_trace()
         b=[]
-        for i in x:
-          x111=Data(x=i,edge_index=edge_index)
-          xx=self.GCN3(x111.x,x111.edge_index)
-          b.append(xx)
-        x1=torch.stack(b)
+        # for i in x:
+        #   x111=Data(x=i,edge_index=edge_index)
+        #   xx=self.GCN3(x111.x,x111.edge_index)
+        #   b.append(xx)
+        # x1=torch.stack(b)
+
+        # Assuming x is a list of node feature tensors and edge_index is shared
+        # Create a list of Data objects
+        data_list = [Data(x=feat, edge_index=edge_index) for feat in x]
+
+        # Use Batch to process all Data objects at once
+        batch = Batch.from_data_list(data_list)
+
+        # Now pass the batched graph to your model
+        batch_output = self.GCN3(batch.x, batch.edge_index)
+        x1 = batch_output
+
         biases = self.biases[(output_size,)]
         x1 += biases
         x1 = x1.reshape(shape=(batch_size, self.num_nodes* output_size))
@@ -383,120 +395,131 @@ class GraphGRU(nn.Module):
         return output2
 
 
-history,future=30,30
+train_start = 1
+train_end = 15
+test_start = 21
+test_end = 26
+val_start = 27
+val_end = 28
 voxel_size = int(256/2)
 num_nodes = 240
 pcd_name = 'soldier'
-train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
-print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
-train_x = torch.from_numpy(train_x)
-train_y = torch.from_numpy(train_y)
-test_x = torch.from_numpy(test_x)
-test_y = torch.from_numpy(test_y)
-batch_size=128*2
-train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
-test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=False)
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                          batch_size=batch_size,
-                                          shuffle=False)
-##################################################分界线##########################################
-# write a cpu model for testing
-    #  a.to(self.device)
-feature_num = train_x.shape[-1]
-assert feature_num == 7
-input_size = feature_num
-out_size = 1
-if not torch.cuda.is_available():
-    mymodel = GraphGRU(future,feature_num,100,out_size,history)
-else:
-    mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
-print(mymodel)
-num_epochs=50
-learning_rate=0.0003
-criterion = torch.nn.MSELoss()    # mean-squared error for regression
-optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
-output_windows=future
-lossa=[]
-for epochs in range(num_epochs):
-  iter1 = 0
-  iter2 = 0
-  loss_total=0
-  RMSET=0
-  for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
-    #  import pdb;pdb.set_trace()
-    #  print(f'{i}/{len(train_loader)}')
-     if torch.cuda.is_available():
-        batch_x=batch_x.cuda()
-        batch_y=batch_y.cuda()
-     else:
-        batch_x=batch_x
-        batch_y=batch_y
-    #  import pdb;pdb.set_trace()   
-     outputs = mymodel(batch_x)
-    #  import pdb;pdb.set_trace()
-     # clear the gradients
-     optimizer.zero_grad()
-     #loss
-     loss = criterion(outputs,batch_y)
-     loss_total=loss_total+loss.item()
-     #backpropagation
-     loss.backward()
-     optimizer.step()
-     iter1+=1
-  loss_avg = loss_total/iter1
-  losss=loss_avg
-  lossa.append(losss)
-  print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg))
-  # save model every 10 epochs and then reload it to continue training
-  if epochs % 10 == 0:
-    #save and reload
-      torch.save(mymodel.state_dict(), f'./data/graphgru_{epochs}.pkl')
-    #   mymodel.load_state_dict(torch.load(f'./data/graphgru_{epochs}.pkl')) 
-      print('model saved')
+feature_num = 7
+def main():
+    test_flag = True
+    history,future=150,150
+    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+    print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
+    train_x = torch.from_numpy(train_x)
+    train_y = torch.from_numpy(train_y)
+    test_x = torch.from_numpy(test_x)
+    test_y = torch.from_numpy(test_y)
+    batch_size=32
+    train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
+    test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                            batch_size=batch_size,
+                                            shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                            batch_size=batch_size,
+                                            shuffle=False)
+    ##################################################分界线##########################################
+    # write a cpu model for testing
+        #  a.to(self.device)
+    feature_num = train_x.shape[-1]
+    assert feature_num == 7
+    input_size = feature_num
+    out_size = 1
+    if not torch.cuda.is_available():
+        mymodel = GraphGRU(future,feature_num,100,out_size,history)
+    else:
+        mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
+    print(mymodel)
+    num_epochs=10
+    learning_rate=0.0003
+    criterion = torch.nn.MSELoss()    # mean-squared error for regression
+    optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
+    output_windows=future
+    lossa=[]
+    for epochs in range(num_epochs):
+        iter1 = 0
+        iter2 = 0
+        loss_total=0
+        RMSET=0
+        for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
+            #  import pdb;pdb.set_trace()
+            #  print(f'{i}/{len(train_loader)}')
+            if torch.cuda.is_available():
+                batch_x=batch_x.cuda()
+                batch_y=batch_y.cuda()
+            else:
+                batch_x=batch_x
+                batch_y=batch_y
+            #  import pdb;pdb.set_trace()   
+            outputs = mymodel(batch_x)
+            #  import pdb;pdb.set_trace()
+            # clear the gradients
+            optimizer.zero_grad()
+            #loss
+            loss = criterion(outputs,batch_y)
+            loss_total=loss_total+loss.item()
+            #backpropagation
+            loss.backward()
+            optimizer.step()
+            iter1+=1
+        loss_avg = loss_total/iter1
+        losss=loss_avg
+        lossa.append(losss)
+        print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg))
+        # save model every 10 epochs and then reload it to continue training
+        if epochs % 10 == 0:
+            #save and reload
+            torch.save(mymodel.state_dict(), f'./data/graphgru_{epochs}.pkl')
+            #   mymodel.load_state_dict(torch.load(f'./data/graphgru_{epochs}.pkl')) 
+            print('model saved')
 
 
-np.save('./data/graphgruloss.txt',lossa)
-print('loss saved')
+    np.save('./data/graphgruloss.txt',lossa)
+    print('loss saved')
 
-mae = MeanAbsoluteError().cuda()
-mape=MeanAbsolutePercentageError().cuda()
-mse=MeanSquaredError().cuda()
-net = mymodel.eval().cuda()
-real=[]
-prediction=[]
-history = []
-MAE=0
-MAPE=0
-MSE=0
-BAT_=0
-with torch.no_grad():
- for u in range(future):
-     for i,(batch_x, batch_y) in enumerate (test_loader):
-        batch_x=batch_x.cuda()
-        batch_y=batch_y.cuda()
-        outputs = net(batch_x)
-        # if u==2:
-        #   real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
-        MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-        MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-        
-        # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-        MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+    mae = MeanAbsoluteError().cuda()
+    mape=MeanAbsolutePercentageError().cuda()
+    mse=MeanSquaredError().cuda()
+    net = mymodel.eval().cuda()
+    real=[]
+    prediction=[]
+    history = []
+    MAE=0
+    MAPE=0
+    MSE=0
+    BAT_=0
+    with torch.no_grad():
+        if test_flag:
+            for u in range(future):
+                for i,(batch_x, batch_y) in enumerate (test_loader):
+                    batch_x=batch_x.cuda()
+                    batch_y=batch_y.cuda()
+                    outputs = net(batch_x)
+                    # if u==2:
+                    #   real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
+                    MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                    MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                    
+                    # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                    MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
 
-        MAE+=MAE_d
-        MAPE+=MAPE_d
-        MSE+=MSE_d
-        BAT_+=1
-     print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
-    #  if u==2:
-    #     # import pdb; pdb.set_trace()
-    #     with open('history.pkl', 'wb') as f:
-    #         pickle.dump(history, f)
-    #     with open('real.pkl', 'wb') as f:
-    #         pickle.dump(real, f) 
-    #     with open('prediction.pkl', 'wb') as f:
-    #         pickle.dump(prediction, f)    
-
+                    MAE+=MAE_d
+                    MAPE+=MAPE_d
+                    MSE+=MSE_d
+                    BAT_+=1
+                print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
+                #  if u==2:
+                #     # import pdb; pdb.set_trace()
+                #     with open('history.pkl', 'wb') as f:
+                #         pickle.dump(history, f)
+                #     with open('real.pkl', 'wb') as f:
+                #         pickle.dump(real, f) 
+                #     with open('prediction.pkl', 'wb') as f:
+                #         pickle.dump(prediction, f)    
+if __name__ == '__main__':
+    main()
