@@ -25,8 +25,6 @@ def getedge(x,edge_number):
     df = pd.read_csv(x, nrows=edge_number)
     # get the df where edge_feature is 1
     df = df[df['edge_feature']==1]
-    # print(len(df))
-    # w
     r1 = df.loc[:, 'start_node'].values
     r2 = df.loc[:, 'end_node'].values
     return r1, r2
@@ -48,8 +46,8 @@ def getdata(file_name,data_type):
 
 def getdata_normalize(file_name,data_type):
     df = pd.read_csv(file_name)
-    x = df[data_type[2]].to_numpy()
-    x_n = (x - min(x)) / (max(x) - min(x))
+    # x = df[data_type[2]].to_numpy()
+    # x_n = (x - min(x)) / (max(x) - min(x))
 
     # x_2= df[data_type[1]].to_numpy()
 
@@ -62,11 +60,11 @@ def getdata_normalize(file_name,data_type):
 
     #x_3= df[data_type[2]].to_numpy()
     # return x_n,x_2
-    return x_n,x_list
+    return x_list
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
-def get_train_data(data,history,future):
+def get_train_data_splituser(data,history,future):
     data_x = []
     data_y = []
     for i in range(len(data)-history-future):
@@ -74,8 +72,9 @@ def get_train_data(data,history,future):
        data_y.append(data[i+history:i+history+future])
     data_x=np.array(data_x)
     data_y=np.array(data_y)
-    # data_y only get the third column feature of the last dim, from shape (batch size, 3, 240, 7)
-    # to (batch size, 3, 240)
+    assert data_y.shape[0] >= future + history
+    assert data_x.shape[0] >= future + history
+    # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
     data_y = data_y[:,:,:,2:3]#only occlusion feature
 
     size1 = int(len(data_x) * 0.8)
@@ -86,71 +85,112 @@ def get_train_data(data,history,future):
     test_y = data_y[size1:size2]
     val_x = data_x[size2:]
     val_y = data_y[size2:]
-    # import pdb;pdb.set_trace()
-    # train_x = np.expand_dims(train_x,axis=-1)
-    # train_y = np.expand_dims(train_y,axis=-1)
-    # test_x = np.expand_dims(test_x,axis=-1)
-    # test_y = np.expand_dims(test_y,axis=-1)
-    # val_x = np.expand_dims(val_x,axis=-1)
-    # val_y = np.expand_dims(val_y,axis=-1)
     return train_x,train_y,test_x,test_y,val_x,val_y
-history,future=150,60
-voxel_size = int(256/2)
-pcd_name = 'soldier'
+
+def get_history_future_data(data,history,future):
+    data_x = []
+    data_y = []
+    if data.shape[0] <= future + history:
+        return data_x,data_y
+    for i in range(len(data)-history-future):
+       data_x.append(data[i:i+history])
+       data_y.append(data[i+history:i+history+future])
+    data_x=np.array(data_x)
+    data_y=np.array(data_y)
+    # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
+    data_y = data_y[:,:,:,2:3]#only occlusion feature
+
+    return data_x,data_y
+
+
 # participant = 'P01_V1'
-train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-for user_i in tqdm(range(1,16)):
-    participant = 'P'+str(user_i).zfill(2)+'_V1'
-    # generate graph voxel grid features
-    prefix = f'{pcd_name}_VS{voxel_size}'
-    node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+def get_train_test_split_user():
+    train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    for user_i in tqdm(range(1,16)):
+        participant = 'P'+str(user_i).zfill(2)+'_V1'
+        # generate graph voxel grid features
+        prefix = f'{pcd_name}_VS{voxel_size}'
+        node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+        column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+        # column_name ['occlusion_feature']
+        norm_data=getdata_normalize(node_feature_path,column_name)
+        # x=np.array(list(zip(a1)))
+        # x=np.array(list(zip(a2)))
+        x=np.array(norm_data)
+        # x=x.reshape(1440,301,1)
+        feature_num = len(column_name)
+        # feature_num = 1
+        print('feature_num:',feature_num)
+        x=x.reshape(feature_num,-1,num_nodes)
+        # import pdb;pdb.set_trace()
+        x=x.transpose(1,2,0)
+        train_x1,train_y1,test_x1,test_y1,val_x1,val_y1=get_train_data_splituser(x,history,future)
+        train_x.append(train_x1)
+        train_y.append(train_y1)
+        test_x.append(test_x1)
+        test_y.append(test_y1)
+        val_x.append(val_x1)
+        val_y.append(val_y1)
+    train_x = np.concatenate(train_x)
+    train_y = np.concatenate(train_y)
+    test_x = np.concatenate(test_x)
+    test_y = np.concatenate(test_y)
+    val_x = np.concatenate(val_x)
+    val_y = np.concatenate(val_y)
+    return train_x,train_y,test_x,test_y,val_x,val_y
+# import pdb;pdb.set_trace()
+
+def get_train_test_data_on_users(history,future):
+    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    train_start = 14
+    train_end = 15
+    test_start = 1
+    test_end = 2
+    val_start = 15
+    val_end = 15
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     # column_name ['occlusion_feature']
-    a1,a2=getdata_normalize(node_feature_path,column_name)
-    # x=np.array(list(zip(a1)))
-    # x=np.array(list(zip(a2)))
-    x=np.array(a2)
-    # x=x.reshape(1440,301,1)
-    feature_num = len(column_name)
-    # feature_num = 1
-    print('feature_num:',feature_num)
-    x=x.reshape(feature_num,150,240)
-    x=x.transpose(1,2,0)
-    train_x1,train_y1,test_x1,test_y1,val_x1,val_y1=get_train_data(x,history,future)
-    train_x.append(train_x1)
-    train_y.append(train_y1)
-    test_x.append(test_x1)
-    test_y.append(test_y1)
-    val_x.append(val_x1)
-    val_y.append(val_y1)
-train_x = np.concatenate(train_x)
-train_y = np.concatenate(train_y)
-test_x = np.concatenate(test_x)
-test_y = np.concatenate(test_y)
-val_x = np.concatenate(val_x)
-val_y = np.concatenate(val_y)
+    def get_train_test_data(train_start,train_end):
+        train_x,train_y = [],[]
+        for user_i in tqdm(range(train_start,train_end)):
+            participant = 'P'+str(user_i).zfill(2)+'_V1'
+            # generate graph voxel grid features
+            prefix = f'{pcd_name}_VS{voxel_size}'
+            node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+            norm_data=getdata_normalize(node_feature_path,column_name)
+            x=np.array(norm_data)
+            feature_num = len(column_name)
+            # feature_num = 1
+            print('feature_num:',feature_num)
+            x=x.reshape(feature_num,-1,num_nodes)
+            # import pdb;pdb.set_trace()
+            x=x.transpose(1,2,0)
+            train_x1,train_y1=get_history_future_data(x,history,future)
+            if len(train_x1) == 0:
+                print(f'no enough data{participant}')
+                continue
+            train_x.append(train_x1)
+            train_y.append(train_y1)
+        # import pdb;pdb.set_trace()
+        # try:
+        if len(train_x) == 0:
+            return [],[]
+        train_x = np.concatenate(train_x)
+        # except:
+            # import pdb;pdb.set_trace()
+        train_y = np.concatenate(train_y)
+        return train_x,train_y
+    
+    train_x,train_y = get_train_test_data(train_start,train_end)
+    test_x,test_y = get_train_test_data(test_start,test_end)
+    val_x,val_y = get_train_test_data(val_start,val_end)
+    return train_x,train_y,test_x,test_y,val_x,val_y
 
 
 
-
-train_x = torch.from_numpy(train_x)
-train_y = torch.from_numpy(train_y)
-test_x = torch.from_numpy(test_x)
-test_y = torch.from_numpy(test_y)
-
-
-batch_size=32
-train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
-test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=False)
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                          batch_size=batch_size,
-                                          shuffle=False)
 #######################################################
 class GRULinear(nn.Module):
-    def __init__(self, num_gru_units: int, output_dim: int, bias: float = 0.0):
+    def __init__(self, num_gru_units: int, output_dim: int,num_nodes: int, bias: float = 0.0):
         super(GRULinear, self).__init__()
         self._num_gru_units = num_gru_units
         self._output_dim = output_dim
@@ -160,13 +200,14 @@ class GRULinear(nn.Module):
         )
         self.biases = nn.Parameter(torch.FloatTensor(self._output_dim))
         self.reset_parameters()
+        self.num_nodes = num_nodes
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.weights)
         nn.init.constant_(self.biases, self._bias_init_value)
 
     def forward(self, inputs, hidden_state):
-        num_nodes=240
+        num_nodes=self.num_nodes
         batch_size = hidden_state.shape[0]
         # assert batch_size == 200
         inputs = inputs.reshape((batch_size, num_nodes, feature_num))
@@ -211,8 +252,8 @@ class GraphGRUCell(nn.Module):
         r1, r2 = getedge(edge_path,4338)
         self.r1 = r1
         self.r2 = r2
-        self.GRU1 = GRULinear(100, 200)
-        self.GRU2 = GRULinear(100, 100)
+        self.GRU1 = GRULinear(100, 200, self.num_nodes)
+        self.GRU2 = GRULinear(100, 100, self.num_nodes)
         # self.GCN3 = GATConv(101, 100)
         self.GCN3 = GATConv(100+feature_num, 100)
     def init_params(self, bias_start=0.0):
@@ -281,7 +322,7 @@ class GraphGRUCell(nn.Module):
 class GraphGRU(nn.Module):
     def __init__(self,future, input_size, hidden_size, output_dim,inputwindow):
         super(GraphGRU, self).__init__()
-        self.num_nodes = 240
+        self.num_nodes = num_nodes
         self.input_dim =input_size
         self.output_dim = output_dim
         self.gru_units = hidden_size
@@ -341,10 +382,29 @@ class GraphGRU(nn.Module):
         return output2
 
 
-
+history,future=30,30
+voxel_size = int(256/2)
+num_nodes = 240
+pcd_name = 'soldier'
+train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+train_x = torch.from_numpy(train_x)
+train_y = torch.from_numpy(train_y)
+test_x = torch.from_numpy(test_x)
+test_y = torch.from_numpy(test_y)
+batch_size=int(128/4)
+train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
+test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                           batch_size=batch_size,
+                                           shuffle=False)
+test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                          batch_size=batch_size,
+                                          shuffle=False)
 ##################################################分界线##########################################
 # write a cpu model for testing
     #  a.to(self.device)
+feature_num = train_x.shape[-1]
+assert feature_num == 7
 input_size = feature_num
 out_size = 1
 if not torch.cuda.is_available():
@@ -352,7 +412,7 @@ if not torch.cuda.is_available():
 else:
     mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
 print(mymodel)
-num_epochs=100
+num_epochs=30
 learning_rate=0.0003
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -363,8 +423,9 @@ for epochs in range(num_epochs):
   iter2 = 0
   loss_total=0
   RMSET=0
-  for i,(batch_x, batch_y) in enumerate (train_loader):
-     
+  for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
+    #  import pdb;pdb.set_trace()
+    #  print(f'{i}/{len(train_loader)}')
      if torch.cuda.is_available():
         batch_x=batch_x.cuda()
         batch_y=batch_y.cuda()
@@ -387,7 +448,7 @@ for epochs in range(num_epochs):
   losss=loss_avg
   lossa.append(losss)
   print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg))
-np.save('lossa',lossa)
+np.save('./data/graphgruloss.txt',lossa)
 mae = MeanAbsoluteError().cuda()
 mape=MeanAbsolutePercentageError().cuda()
 mse=MeanSquaredError().cuda()
@@ -417,7 +478,8 @@ with torch.no_grad():
         MAPE+=MAPE_d
         MSE+=MSE_d
         BAT_+=1
-     print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % (30*(u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
+     print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
+    #  print("new TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
     #  if u==2:
     #     # import pdb; pdb.set_trace()
     #     with open('history.pkl', 'wb') as f:

@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/scratch/cl5089/point_cloud_FoV_Graph/graphgru.py", line 2, in <module>
+    import pandas as pd
+ModuleNotFoundError: No module named 'pandas'
+/ext3/miniconda3/envs/myenv/lib/python3.9/site-packages/torch/__init__.py:696: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:451.)
+  _C._set_default_tensor_type(t)
+  0%|          | 0/10 [00:00<?, ?it/s] 10%|█         | 1/10 [00:00<00:05,  1.73it/s] 20%|██        | 2/10 [00:01<00:03,  2.01it/s] 30%|███       | 3/10 [00:01<00:03,  2.06it/s] 40%|████      | 4/10 [00:01<00:02,  2.72it/s] 50%|█████     | 5/10 [00:01<00:01,  3.25it/s] 60%|██████    | 6/10 [00:02<00:01,  3.15it/s] 70%|███████   | 7/10 [00:02<00:00,  3.58it/s] 80%|████████  | 8/10 [00:02<00:00,  4.23it/s] 90%|█████████ | 9/10 [00:02<00:00,  3.61it/s]100%|██████████| 10/10 [00:03<00:00,  3.96it/s]100%|██████████| 10/10 [00:03<00:00,  3.20it/s]
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:00<00:00,  6.55it/s] 50%|█████     | 2/4 [00:00<00:00,  3.85it/s] 75%|███████▌  | 3/4 [00:00<00:00,  4.04it/s]100%|██████████| 4/4 [00:00<00:00,  5.24it/s]100%|██████████| 4/4 [00:00<00:00,  4.85it/s]
+feature_num: 7
+feature_num: 7
+feature_num: 7
+feature_num: 7
+0it [00:00, ?it/s]0it [00:00, ?it/s]
