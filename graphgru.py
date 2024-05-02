@@ -14,6 +14,7 @@ from torchmetrics import MeanSquaredError
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
 from tqdm import tqdm
+from time import time
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 # def getedge(x,edge_number):
@@ -142,12 +143,12 @@ def get_train_test_split_user():
 
 def get_train_test_data_on_users(history,future):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    train_start = 14
-    train_end = 15
-    test_start = 1
-    test_end = 2
-    val_start = 15
-    val_end = 15
+    train_start = 1
+    train_end = 21
+    test_start = 21
+    test_end = 26
+    val_start = 27
+    val_end = 28
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     # column_name ['occlusion_feature']
     def get_train_test_data(train_start,train_end):
@@ -387,11 +388,12 @@ voxel_size = int(256/2)
 num_nodes = 240
 pcd_name = 'soldier'
 train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
 train_x = torch.from_numpy(train_x)
 train_y = torch.from_numpy(train_y)
 test_x = torch.from_numpy(test_x)
 test_y = torch.from_numpy(test_y)
-batch_size=int(128/4)
+batch_size=128*2
 train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
 test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -412,7 +414,7 @@ if not torch.cuda.is_available():
 else:
     mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
 print(mymodel)
-num_epochs=30
+num_epochs=50
 learning_rate=0.0003
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -448,7 +450,17 @@ for epochs in range(num_epochs):
   losss=loss_avg
   lossa.append(losss)
   print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg))
+  # save model every 10 epochs and then reload it to continue training
+  if epochs % 10 == 0:
+    #save and reload
+      torch.save(mymodel.state_dict(), f'./data/graphgru_{epochs}.pkl')
+    #   mymodel.load_state_dict(torch.load(f'./data/graphgru_{epochs}.pkl')) 
+      print('model saved')
+
+
 np.save('./data/graphgruloss.txt',lossa)
+print('loss saved')
+
 mae = MeanAbsoluteError().cuda()
 mape=MeanAbsolutePercentageError().cuda()
 mse=MeanSquaredError().cuda()
@@ -466,8 +478,8 @@ with torch.no_grad():
         batch_x=batch_x.cuda()
         batch_y=batch_y.cuda()
         outputs = net(batch_x)
-        if u==2:
-          real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
+        # if u==2:
+        #   real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
         MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
         MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
         
@@ -479,7 +491,6 @@ with torch.no_grad():
         MSE+=MSE_d
         BAT_+=1
      print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
-    #  print("new TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
     #  if u==2:
     #     # import pdb; pdb.set_trace()
     #     with open('history.pkl', 'wb') as f:
