@@ -79,7 +79,7 @@ def generate_graph():
     # print(graph_edges_df_integer)
 
 def generate_node_feature():
-    for user_i in tqdm(range(1,28)):
+    for user_i in tqdm(range(18,28)):
         participant = 'P'+str(user_i).zfill(2)+'_V1'
         node_index = []
         occupancy_feature = []

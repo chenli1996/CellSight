@@ -112,6 +112,9 @@ def downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8):
     return down_pcd_remove
 
 def hidden_point_removal(pcd,para_eye):
+    # if pcd has no points, return empty point cloud
+    if len(pcd.points) <= 3:
+        return pcd
     centroid = [0,500,0]
     # get L2 norm of the vector
     radius = np.linalg.norm(np.array(para_eye)-np.array(centroid))*1000
@@ -297,7 +300,7 @@ def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
                                 trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix='',save=False,render_flag=False):    
-    pcd = get_pcd_data(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index)
+    pcd = get_pcd_data(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index%150)
     # get XYZ data
     selected_position = trajectory_positions[trajectory_index]
     # para_eye = [i*1024/1.8 for i in selected_position]

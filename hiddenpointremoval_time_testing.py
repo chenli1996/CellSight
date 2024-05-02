@@ -71,9 +71,18 @@ def main():
     print("Time taken for hidden_point_removal with trace on 30 frames with downsample: ", time.time()-start_time)
 
     return
+def test_hpr_smallest_number_of_points():
+    # build a point cloud with 2 points
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(np.array([[0,0,0],[1,1,1],[1,10,2]]))
+    camera = [ 0, 0, 100 ]
+    radius = 1000000*2
+    _, pt_map = pcd.hidden_point_removal(camera,radius)
+    print('pt_map:',pt_map)
 
 if __name__ == '__main__':
-    main()
+    # main()
+    test_hpr_smallest_number_of_points()
 
     # radius = 1000000*2
     # pcd = down_pcd
