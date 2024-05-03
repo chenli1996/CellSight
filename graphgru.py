@@ -414,7 +414,7 @@ def main():
     train_y = torch.from_numpy(train_y)
     test_x = torch.from_numpy(test_x)
     test_y = torch.from_numpy(test_y)
-    batch_size=32
+    batch_size=64
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -435,7 +435,7 @@ def main():
     else:
         mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
     print(mymodel)
-    num_epochs=10
+    num_epochs=50
     learning_rate=0.0003
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
