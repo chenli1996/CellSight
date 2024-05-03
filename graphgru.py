@@ -15,6 +15,7 @@ from torch_geometric.nn import GATConv
 from torch_geometric.data import Data,Batch
 from tqdm import tqdm
 from time import time
+import os
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 # def getedge(x,edge_number):
@@ -187,17 +188,89 @@ def get_train_test_data_on_users(history,future):
     val_x,val_y = get_train_test_data(val_start,val_end)
     return train_x,train_y,test_x,test_y,val_x,val_y
 
+def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
+    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    # train_start = 1
+    # train_end = 5
+    # test_start = 21
+    # test_end = 26 -3
+    # val_start = 27
+    # val_end = 28
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    pcd_name_list = ['longdress','loot','redandblack','soldier']
+    # column_name ['occlusion_feature']
+    def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
+        # p_start = p_start + start_bias
+        # p_end = p_end + end_bias
+        print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
+        train_x,train_y = [],[]
+        for pcd_name in pcd_name_list:
+            print(f'pcd_name:{pcd_name}')
+            for user_i in tqdm(range(p_start,p_end)):
+                participant = 'P'+str(user_i).zfill(2)+'_V1'
+                # generate graph voxel grid features
+                prefix = f'{pcd_name}_VS{voxel_size}'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+                norm_data=getdata_normalize(node_feature_path,column_name)
+                x=np.array(norm_data)
+                feature_num = len(column_name)
+                # feature_num = 1
+                print('feature_num:',feature_num)
+                x=x.reshape(feature_num,-1,num_nodes)
+                # import pdb;pdb.set_trace()
+                x=x.transpose(1,2,0)
+                train_x1,train_y1=get_history_future_data(x,history,future)
+                if len(train_x1) == 0:
+                    print(f'no enough data{participant}')
+                    continue
+                train_x.append(train_x1)
+                train_y.append(train_y1)
+        # import pdb;pdb.set_trace()
+        # try:
+        if len(train_x) == 0:
+            return [],[]
+        train_x = np.concatenate(train_x)
+        # except:
+        # import pdb;pdb.set_trace()
+        train_y = np.concatenate(train_y)
+        return train_x,train_y
+    # if data is saved, load it
+    if os.path.exists(f'./data/all_videos_train_x{history}_{future}.npy'):
+        print('load data from file')
+        # add future history in the file name
+        train_x = np.load(f'./data/all_videos_train_x{history}_{future}.npy')
+        train_y = np.load(f'./data/all_videos_train_y{history}_{future}.npy')
+        test_x = np.load(f'./data/all_videos_test_x{history}_{future}.npy')
+        test_y = np.load(f'./data/all_videos_test_y{history}_{future}.npy')
+        val_x = np.load(f'./data/all_videos_val_x{history}_{future}.npy')
+        val_y = np.load(f'./data/all_videos_val_y{history}_{future}.npy')        
+    else:
+        print('generate data from files')
+        train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
+        test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
+        val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
+        
+        # save data to file with prefix is all_videos
+        np.save(f'./data/all_videos_train_x{history}_{future}.npy',train_x)
+        np.save(f'./data/all_videos_train_y{history}_{future}.npy',train_y)
+        np.save(f'./data/all_videos_test_x{history}_{future}.npy',test_x)
+        np.save(f'./data/all_videos_test_y{history}_{future}.npy',test_y)
+        np.save(f'./data/all_videos_val_x{history}_{future}.npy',val_x)
+        np.save(f'./data/all_videos_val_y{history}_{future}.npy',val_y)
+        print('data saved')
 
+    return train_x,train_y,test_x,test_y,val_x,val_y
 
 #######################################################
 class GRULinear(nn.Module):
-    def __init__(self, num_gru_units: int, output_dim: int,num_nodes: int, bias: float = 0.0):
+    def __init__(self, num_gru_units: int, output_dim: int,num_nodes: int, feature_num: int, bias: float = 0.0):
         super(GRULinear, self).__init__()
         self._num_gru_units = num_gru_units
         self._output_dim = output_dim
         self._bias_init_value = bias
+        self.feature_num = feature_num
         self.weights = nn.Parameter(
-            torch.DoubleTensor(self._num_gru_units + feature_num, self._output_dim)
+            torch.DoubleTensor(self._num_gru_units + self.feature_num, self._output_dim)
         )
         self.biases = nn.Parameter(torch.FloatTensor(self._output_dim))
         self.reset_parameters()
@@ -208,23 +281,22 @@ class GRULinear(nn.Module):
         nn.init.constant_(self.biases, self._bias_init_value)
 
     def forward(self, inputs, hidden_state):
-        num_nodes=self.num_nodes
         batch_size = hidden_state.shape[0]
         # assert batch_size == 200
-        inputs = inputs.reshape((batch_size, num_nodes, feature_num))
+        inputs = inputs.reshape((batch_size, self.num_nodes, self.feature_num))
         # inputs (batch_size, num_nodes, feature_num)
         # hidden_state (batch_size, num_nodes, num_gru_units)
         hidden_state = hidden_state.reshape(
-            (batch_size, num_nodes, self._num_gru_units)
+            (batch_size, self.num_nodes, self._num_gru_units)
         )
         # [inputs, hidden_state] "[x, h]" (batch_size, num_nodes, num_gru_units + 1)
         concatenation = torch.cat((inputs, hidden_state), dim=2)
         # [x, h] (batch_size * num_nodes, gru_units + 1)
-        concatenation = concatenation.reshape((-1, self._num_gru_units + feature_num))
+        concatenation = concatenation.reshape((-1, self._num_gru_units + self.feature_num))
         # [x, h]W + b (batch_size * num_nodes, output_dim)
         outputs = concatenation @ self.weights + self.biases
         # [x, h]W + b (batch_size, num_nodes, output_dim)
-        outputs = outputs.reshape((batch_size, num_nodes, self._output_dim))
+        outputs = outputs.reshape((batch_size, self.num_nodes, self._output_dim))
         # [x, h]W + b (batch_size, num_nodes * output_dim)
         #outputs = outputs.reshape((batch_size, num_nodes * self._output_dim))
         return outputs
@@ -237,7 +309,7 @@ class GRULinear(nn.Module):
         }
 
 class GraphGRUCell(nn.Module):
-    def __init__(self, num_units, num_nodes, device, input_dim=1):
+    def __init__(self, num_units, num_nodes, r1,r2, device, input_dim=1):
         super(GraphGRUCell, self).__init__()
         self.num_units = num_units
         self.num_nodes = num_nodes
@@ -245,18 +317,12 @@ class GraphGRUCell(nn.Module):
         self.device = device
         self.act = torch.tanh
         self.init_params()
-        # 这里提前构建好边集
-        voxel_size = int(256/2)
-        edge_prefix = str(voxel_size)
-        edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
-        # r1, r2 = getedge('newedge',900)
-        r1, r2 = getedge(edge_path,4338)
         self.r1 = r1
         self.r2 = r2
-        self.GRU1 = GRULinear(100, 200, self.num_nodes)
-        self.GRU2 = GRULinear(100, 100, self.num_nodes)
+        self.GRU1 = GRULinear(100, 200, self.num_nodes,self.input_dim)
+        self.GRU2 = GRULinear(100, 100, self.num_nodes,self.input_dim)
         # self.GCN3 = GATConv(101, 100)
-        self.GCN3 = GATConv(100+feature_num, 100)
+        self.GCN3 = GATConv(100+self.input_dim, 100)
     def init_params(self, bias_start=0.0):
         input_size = self.input_dim + self.num_units
         weight_0 = torch.nn.Parameter(torch.empty((input_size, 2 * self.num_units), device=self.device))
@@ -333,14 +399,15 @@ class GraphGRUCell(nn.Module):
 
 
 class GraphGRU(nn.Module):
-    def __init__(self,future, input_size, hidden_size, output_dim,inputwindow):
+    def __init__(self,future, input_size, hidden_size, output_dim,history,num_nodes,r1,r2):
         super(GraphGRU, self).__init__()
         self.num_nodes = num_nodes
         self.input_dim =input_size
         self.output_dim = output_dim
         self.gru_units = hidden_size
-
-        self.input_window = inputwindow
+        self.r1 = r1
+        self.r2 = r2
+        self.input_window = history
         self.output_window = future
         self.device = torch.device('cuda')
         # add a cpu device for testing
@@ -348,8 +415,8 @@ class GraphGRU(nn.Module):
             self.device = torch.device('cpu')
 
         # -------------------构造模型-----------------------------
-        self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.device, self.input_dim)
-        self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.device, self.input_dim)
+        self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.r1, self.r2, self.device, self.input_dim)
+        self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.device, self.input_dim)
         self.fc1 = nn.Linear(self.gru_units*2, 120)
         #self.output_model = nn.Linear(self.gru_units*2, self.output_window * self.output_dim)
         self.output_model = nn.Linear(120, self.output_window * self.output_dim)
@@ -394,27 +461,64 @@ class GraphGRU(nn.Module):
 
         return output2
 
+def eval(mymodel,test_loader,future):
+    mae = MeanAbsoluteError().cuda()
+    mape=MeanAbsolutePercentageError().cuda()
+    mse=MeanSquaredError().cuda()
+    net = mymodel.eval().cuda()
+    real=[]
+    prediction=[]
+    history = []
+    MAE=0
+    MAPE=0
+    MSE=0
+    BAT_=0
+    with torch.no_grad():
+        for i,(batch_x, batch_y) in enumerate (test_loader):
+            batch_x=batch_x.cuda()
+            batch_y=batch_y.cuda()
+            outputs = net(batch_x)
+            for u in range(future):
 
-train_start = 1
-train_end = 21
-test_start = 21
-test_end = 26
-val_start = 27
-val_end = 28
-voxel_size = int(256/2)
-num_nodes = 240
-pcd_name = 'soldier'
-feature_num = 7
-def main():
-    test_flag = True
-    history,future=150,150
-    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+                # if u==2:
+                #   real,prediction,history=save(batch_x,batch_y,outputs,real,prediction,history)
+                MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                
+                # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+
+                # MAE+=MAE_d
+                # MAPE+=MAPE_d
+                # MSE+=MSE_d
+                # BAT_+=1
+                # import pdb;pdb.set_trace()
+                # print("1 TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
+                print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
+            #  if u==2:
+            #     # import pdb; pdb.set_trace()
+            #     with open('history.pkl', 'wb') as f:
+            #         pickle.dump(history, f)
+            #     with open('real.pkl', 'wb') as f:
+            #         pickle.dump(real, f) 
+            #     with open('prediction.pkl', 'wb') as f:
+            #         pickle.dump(prediction, f)    
+
+
+
+
+
+def eval_model():
+    history,future=150,60
+    output_size = 1
+    # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=3)
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
     train_x = torch.from_numpy(train_x)
     train_y = torch.from_numpy(train_y)
     test_x = torch.from_numpy(test_x)
     test_y = torch.from_numpy(test_y)
-    batch_size=64
+    batch_size=test_x.shape[0]
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -424,18 +528,59 @@ def main():
                                             batch_size=batch_size,
                                             shuffle=False)
     ##################################################分界线##########################################
+    # load model and test
+    if not torch.cuda.is_available():
+        mymodel = GraphGRU(future,feature_num,100,output_size,history)
+    else:
+        mymodel=GraphGRU(future,feature_num,100,output_size,history).cuda()
+    mymodel.load_state_dict(torch.load(f'./data/graphgru_{70}.pkl')) 
+    eval(mymodel,test_loader,future)
+
+
+
+def main():
+    test_flag = True
+    voxel_size = int(128)
+    num_nodes = 240
+    history,future=90,60
+    output_size = 1
+    batch_size=64
+    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=4,voxel_size=voxel_size,num_nodes=num_nodes)
+    print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
+          'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
+          'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
+    
+    train_x = torch.from_numpy(train_x)
+    train_y = torch.from_numpy(train_y)
+    test_x = torch.from_numpy(test_x)
+    test_y = torch.from_numpy(test_y)
+    
+    train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
+    test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                            batch_size=batch_size,
+                                            shuffle=False)
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                            batch_size=batch_size,
+                                            shuffle=False)
+    # load graph edges
+    voxel_size = int(256/2)
+    edge_prefix = str(voxel_size)
+    edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
+    # r1, r2 = getedge('newedge',900)
+    r1, r2 = getedge(edge_path,4338)
+    ##################################################分界线##########################################
     # write a cpu model for testing
         #  a.to(self.device)
     feature_num = train_x.shape[-1]
     assert feature_num == 7
     input_size = feature_num
-    out_size = 1
     if not torch.cuda.is_available():
-        mymodel = GraphGRU(future,feature_num,100,out_size,history)
+        mymodel = GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2)   
     else:
-        mymodel=GraphGRU(future,feature_num,100,out_size,history).cuda()
+        mymodel=GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2).cuda()
     print(mymodel)
-    num_epochs=50
+    num_epochs=64
     learning_rate=0.0003
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -523,3 +668,4 @@ def main():
                 #         pickle.dump(prediction, f)    
 if __name__ == '__main__':
     main()
+    # eval_model()
