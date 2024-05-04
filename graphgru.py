@@ -584,9 +584,9 @@ def main():
     learning_rate=0.0003
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
-    output_windows=future
     lossa=[]
     for epochs in range(num_epochs):
+        mymodel.train()
         iter1 = 0
         iter2 = 0
         loss_total=0
@@ -612,6 +612,7 @@ def main():
             loss.backward()
             optimizer.step()
             iter1+=1
+            
         loss_avg = loss_total/iter1
         losss=loss_avg
         lossa.append(losss)
