@@ -234,6 +234,7 @@ def eval(mymodel,test_loader,future):
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
             outputs = net(batch_x)
+            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
             for u in range(future):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
@@ -291,7 +292,8 @@ def main():
     p_start = 1
     p_end = 28
     output_size = 1
-    batch_size=32
+    # batch_size=32*4 #90 79GB
+    batch_size=64 #150 64GB
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
@@ -342,7 +344,7 @@ def main():
     if torch.cuda.is_available():
         mymodel=mymodel.cuda()
     # print(mymodel)
-    num_epochs=100
+    num_epochs=10
     learning_rate=0.0003
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
