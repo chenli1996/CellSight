@@ -1,0 +1,148 @@
+import numpy as np
+from node_feature_utils import parse_trajectory_data
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def linear_regression(x, y):
+    """
+    Computes the coefficients of a linear regression y = mx + c using least squares.
+    
+    Args:
+    - x: numpy array of shape (n,), the independent variable
+    - y: numpy array of shape (n,), the dependent variable
+    
+    Returns:
+    - m: Slope of the fitted line
+    - c: Intercept of the fitted line
+    """
+    A = np.vstack([x, np.ones(len(x))]).T
+    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    return m, c
+
+def predict_next_state_tlp(user_data, window_size=2,dof=6,future_steps = 1):
+    """
+    Predicts the next state based on the last 'window_size' states using linear regression.
+    
+    Args:
+    - user_data: numpy array of shape (n, 6), where n is the number of timesteps,
+                 and 6 represents the 6 DoF (x, y, z, yaw, pitch, roll).
+    - window_size: int, the number of states to consider for the prediction
+    
+    Returns:
+    - next_state: numpy array of shape (6,), representing the predicted next state.
+    """
+    if user_data.shape[0] < window_size:
+        raise ValueError("Not enough data for prediction.")
+    
+    next_state = np.zeros(dof)
+    time_steps = np.arange(window_size)
+    
+    # Perform linear regression on each DoF using the last 'window_size' states
+    for i in range(dof):
+        m, c = linear_regression(time_steps, user_data[-window_size:, i])
+        next_state[i] = m * (window_size+future_steps-1) + c  # Predict the next state
+    
+    return next_state
+
+def predict_next_state_tlp_rad(user_data, window_size=2,dof=6,future_steps = 1):
+    """
+    Predicts the next state based on the last 'window_size' states using linear regression.
+    
+    Args:
+    - user_data: numpy array of shape (n, 6), where n is the number of timesteps,
+                 and 6 represents the 6 DoF (x, y, z, yaw, pitch, roll).
+    - window_size: int, the number of states to consider for the prediction
+    
+    Returns:
+    - next_state: numpy array of shape (6,), representing the predicted next state.
+    """
+    if user_data.shape[0] < window_size:
+        raise ValueError("Not enough data for prediction.")
+    
+    next_state = np.zeros(dof)
+    time_steps = np.arange(window_size)
+    
+    # Perform linear regression on each DoF using the last 'window_size' states
+    # for i in range(dof):
+    #     m, c = linear_regression(time_steps, user_data[-window_size:, i])
+    #     next_state[i] = (m * (window_size+future_steps-1) + c +360)%360  # Predict the next state
+    for i in range(dof):
+        # Convert the data to radians
+        rad_data = np.deg2rad(user_data[-window_size:, i])
+        
+        # Convert the data to sine and cosine values
+        sin_data = np.sin(rad_data)
+        cos_data = np.cos(rad_data)
+        
+        # Apply linear regression to the sine and cosine values
+        m_sin, c_sin = linear_regression(time_steps, sin_data)
+        m_cos, c_cos = linear_regression(time_steps, cos_data)
+        
+        # Predict the next state
+        next_sin = m_sin * (window_size + future_steps - 1) + c_sin
+        next_cos = m_cos * (window_size + future_steps - 1) + c_cos
+        
+        # Convert the sine and cosine values back to an angle in radians
+        next_rad = np.arctan2(next_sin, next_cos)
+        
+        # Convert the angle to degrees and adjust the range to [0, 360)
+        next_state[i] = (np.rad2deg(next_rad) + 360) % 360
+    
+    return next_state
+
+# Example usage
+# Assuming user_data is a numpy array with your 6DoF data for user1
+# dof = 2
+# user_data = np.random.rand(10, dof)  # Dummy data for demonstration
+
+# next_state = predict_next_state_tlp(user_data, window_size=3,dof=dof)
+# print("Predicted next state using the last 30 states:", next_state)
+
+# read ground truth data
+window_size_lr = 5
+future_steps =5
+file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
+file_name = 'H4_nav.csv'
+user_index = 'P01_V1'
+pred_file_path = "../point_cloud_data/LR_pred/"
+pred_file_name = "H4_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
+
+
+trajectory_positions, trajectory_orientations = parse_trajectory_data(file_path+file_name,user_index=user_index)
+# print(trajectory_positions.shape)
+begin_frame_index = 0
+end_frame_index = trajectory_positions.shape[0]-1
+# end_frame_index = 120
+
+dof = 3
+predicted_trajectory_positions = np.zeros(trajectory_positions[begin_frame_index:end_frame_index+1,:].shape)
+predicted_trajectory_orientations = np.zeros(trajectory_orientations[begin_frame_index:end_frame_index+1,:].shape)
+for frame_index in range(begin_frame_index+window_size_lr,end_frame_index+1 -future_steps +1):
+    future_state = predict_next_state_tlp(trajectory_positions[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=future_steps)
+    predicted_trajectory_positions[frame_index+future_steps -1] = future_state
+    future_state = predict_next_state_tlp_rad(trajectory_orientations[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=1)
+    predicted_trajectory_orientations[frame_index+future_steps -1] = future_state
+    
+    
+  
+gt_df = pd.read_csv(file_path+file_name)
+gt_df = gt_df[gt_df['Participant'] == user_index]
+# save gt data
+gt_file_path = "../point_cloud_data/LR_pred/H4_nav_gt.csv"
+gt_df.to_csv(gt_file_path,index=False)
+
+# initialize df as gt_df copy and replace with the predicted data, we want to keep the original other columns and format
+df = gt_df.copy()
+df.iloc[0:end_frame_index+1,1:4] = predicted_trajectory_positions
+df.iloc[0:end_frame_index+1,4:7] = predicted_trajectory_orientations
+df_pred = df
+df_pred
+
+# get the difference between the predicted and ground truth data
+diff = df_pred.iloc[0:end_frame_index+1,1:7] - gt_df.iloc[0:end_frame_index+1,1:7]
+# write the difference to a file
+# diff_file_path = "../point_cloud_data/LR_pred/"
+diff_file_name = "H4_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
+diff.to_csv(pred_file_path+ diff_file_name, index=False)
+# write the predicted data to a file
+df_pred.to_csv(pred_file_path+pred_file_name,index=False)
