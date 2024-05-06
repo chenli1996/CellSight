@@ -288,17 +288,17 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=150,60
+    history,future=90,40
     p_start = 1
     p_end = 28
     output_size = 1
-    # batch_size=32*4 #90 79GB
-    batch_size=64 #150 64GB
+    num_epochs=10
+    batch_size=32*4 #90 79GB
+    # batch_size=64 #150 64GB
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
-    
     train_x = torch.from_numpy(train_x)
     train_y = torch.from_numpy(train_y)
     test_x = torch.from_numpy(test_x)
@@ -318,33 +318,26 @@ def main():
                                             shuffle=False)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                             batch_size=val_x.shape[0],
-                                            shuffle=False)
-    
-                                               
+                                            shuffle=False)           
     # load graph edges
     voxel_size = int(256/2)
     edge_prefix = str(voxel_size)
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
     # r1, r2 = getedge('newedge',900)
     r1, r2 = getedge(edge_path,4338)
-    ##################################################分界线##########################################
-    # write a cpu model for testing
-        #  a.to(self.device)
     feature_num = train_x.shape[-1]
     assert feature_num == 7
     input_size = feature_num
     mymodel = GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2)
     # if best model is saved, load it
     best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
-    # best_checkpoint_model_path = f'./data/model/best_model_checkpoint.pt' 
     if os.path.exists(best_checkpoint_model_path):   
         mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
-        # mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
         print(f'{best_checkpoint_model_path} model loaded')
     if torch.cuda.is_available():
         mymodel=mymodel.cuda()
     # print(mymodel)
-    num_epochs=10
+    
     learning_rate=0.0003
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -352,8 +345,7 @@ def main():
     val_loss_list = []
 
     # Initialize the early stopping object
-    early_stopping = EarlyStopping(patience=5, verbose=True, path=f'./data/model/best_model_checkpoint{history}_{future}.pt')
-
+    early_stopping = EarlyStopping(patience=3, verbose=True, path=f'./data/model/best_model_checkpoint{history}_{future}.pt')
 
     for epochs in range(1,num_epochs+1):
         mymodel.train()
@@ -368,15 +360,11 @@ def main():
             else:
                 batch_x=batch_x
                 batch_y=batch_y
-            #  import pdb;pdb.set_trace()   
             outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
             optimizer.zero_grad()
             # only get loss on the node who has points, in other words, the node whose occupancy is not 0
             # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
-
-
-
             loss = criterion(outputs,batch_y)
             loss_total=loss_total+loss.item()
             #backpropagation
@@ -392,7 +380,6 @@ def main():
         if epochs % 10 == 0:
             #save and reload
             torch.save(mymodel.state_dict(), f'./data/model/graphgru{history}_{future}_{epochs}.pt')
-            #   mymodel.load_state_dict(torch.load(f'./data/model/graphgru_{epochs}.pt')) 
             print('model saved')
         val_loss = get_val_loss(mymodel,val_loader,criterion)
         val_loss_list.append(val_loss)
@@ -419,9 +406,6 @@ def main():
     mape=MeanAbsolutePercentageError().cuda()
     mse=MeanSquaredError().cuda()
     net = mymodel.eval().cuda()
-    real=[]
-    prediction=[]
-    # history = []
 
     mse_list = []
     mae_list = []
