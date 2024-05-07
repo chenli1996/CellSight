@@ -107,7 +107,8 @@ data_index = "H4"
 file_name = f'{data_index}_nav.csv'
 pred_file_path = "../point_cloud_data/LR_pred/"
 
-for future_steps in [1,30,40,60,90,150]:
+# for future_steps in [1,30,40,60,90,150]:
+for future_steps in [10]:
     pred_file_name = f"{data_index}_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
     diff_file_name = f"{data_index}_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
     gt_file_name = f"{data_index}_nav_gt.csv"
