@@ -408,8 +408,8 @@ def main():
             print("Early stopping")
             break
 
-    np.save(f'./data/graphgru_training_loss{history}_{future}',lossa)
-    np.save(f'./data/graphgru_val_loss{history}_{future}',val_loss_list)
+    np.save(f'./data/output/graphgru_training_loss{history}_{future}',lossa)
+    np.save(f'./data/output/graphgru_val_loss{history}_{future}',val_loss_list)
     print('loss saved')
     # plot training and val loss and save to file
     plt.figure()
