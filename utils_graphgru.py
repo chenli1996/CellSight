@@ -252,7 +252,12 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         np.save(f'./data/data/all_videos_val_x{history}_{future}.npy',val_x)
         np.save(f'./data/data/all_videos_val_y{history}_{future}.npy',val_y)
         print('data saved')
-
+    train_x = train_x.astype(np.float32)
+    train_y = train_y.astype(np.float32)
+    test_x = test_x.astype(np.float32)
+    test_y = test_y.astype(np.float32)
+    val_x = val_x.astype(np.float32)
+    val_y = val_y.astype(np.float32)
     return train_x,train_y,test_x,test_y,val_x,val_y
 
 # # participant = 'P01_V1'

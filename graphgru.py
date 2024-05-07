@@ -14,8 +14,16 @@ from time import time
 import os
 from utils_graphgru import *
 import matplotlib.pyplot as plt
+from torch.profiler import profile, record_function, ProfilerActivity
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+
+
+# torch.set_default_tensor_type(torch.DoubleTensor)
+# set to float32
+# torch.set_default_dtype(torch.float32)
+# torch.set_default_device()
+torch.set_default_tensor_type(torch.FloatTensor)
+# torch.set
 
 #######################################################
 class GRULinear(nn.Module):
@@ -26,7 +34,8 @@ class GRULinear(nn.Module):
         self._bias_init_value = bias
         self.feature_num = feature_num
         self.weights = nn.Parameter(
-            torch.DoubleTensor(self._num_gru_units + self.feature_num, self._output_dim)
+            # torch.DoubleTensor(self._num_gru_units + self.feature_num, self._output_dim)
+            torch.FloatTensor(self._num_gru_units + self.feature_num, self._output_dim)
         )
         self.biases = nn.Parameter(torch.FloatTensor(self._output_dim))
         self.reset_parameters()
@@ -132,6 +141,7 @@ class GraphGRUCell(nn.Module):
         input_size = inputs_and_state.shape[2]
         x = inputs_and_state.to(self.device)
         # edge_index = torch.tensor([self.r1, self.r2], dtype=torch.long).to(self.device)
+        # import pdb;pdb.set_trace()
         edge_index = torch.tensor(np.stack((np.array(self.r1),np.array(self.r2))), dtype=torch.long).to(self.device)
         # import pdb;pdb.set_trace()
         b=[]
@@ -149,6 +159,7 @@ class GraphGRUCell(nn.Module):
         batch = Batch.from_data_list(data_list)
 
         # Now pass the batched graph to your model
+        # import pdb;pdb.set_trace()
         batch_output = self.GCN3(batch.x, batch.edge_index)
         x1 = batch_output
 
@@ -288,14 +299,16 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=90,40
+    history,future=90,60
     p_start = 1
     p_end = 28
     output_size = 1
     num_epochs=10
-    batch_size=32*4 #90 79GB
-    # batch_size=64 #150 64GB
+    batch_size=32*4*2 #90 79GB
+    # batch_size=64*2 #150 64GB
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+
+
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
@@ -309,6 +322,7 @@ def main():
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     val_dataset=torch.utils.data.TensorDataset(val_x,val_y)
+    # import pdb;pdb.set_trace()
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                             batch_size=batch_size,
@@ -352,16 +366,17 @@ def main():
         iter1 = 0
         iter2 = 0
         loss_total=0
-        RMSET=0
+        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
+            # with record_function("model_training"):
         for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
             if torch.cuda.is_available():
                 batch_x=batch_x.cuda()
                 batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-            else:
-                batch_x=batch_x
-                batch_y=batch_y
+            # import pdb;pdb.set_trace()
             outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
             optimizer.zero_grad()
+            # break
+
             # only get loss on the node who has points, in other words, the node whose occupancy is not 0
             # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
@@ -371,6 +386,9 @@ def main():
             loss.backward()
             optimizer.step()
             iter1+=1
+        # Print profiler results
+        # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
+        # break                          
             
         loss_avg = loss_total/iter1
         losss=loss_avg
