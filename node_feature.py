@@ -79,6 +79,8 @@ def generate_node_feature():
     original_index_to_integer_index = results['original_index_to_integer_index']
     # for pcd_name in ['longdress','loot','redandblack']:
     for pcd_name in ['soldier']:
+        history = 90
+        future = 60
         prefix = f'{pcd_name}_VS{voxel_size}_LR'
         for user_i in tqdm(range(1,28)):
             participant = 'P'+str(user_i).zfill(2)+'_V1'
@@ -89,7 +91,7 @@ def generate_node_feature():
             distance_feature = []
             coordinate_feature = []
             # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
-            positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=90,future=30)
+            positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future)
             for trajectory_index in tqdm(range((len(positions)))):
                 # print(f'Processing trajectory {trajectory_index}...')
                 # Load the point cloud data
@@ -152,7 +154,8 @@ def generate_node_feature():
             node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
             if not os.path.exists(f'./data/{prefix}'):
                 os.makedirs(f'./data/{prefix}')
-            node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+            # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+            node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
 
 
 
