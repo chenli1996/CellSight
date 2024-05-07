@@ -10,8 +10,7 @@ import pandas as pd
 import joblib
 # build a simple MLP model
 def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(100,100), max_iter=1000, alpha=0.0001,
-                         solver='adam', verbose=10, random_state=21,tol=0.000000001)
+    model = MLPRegressor(hidden_layer_sizes=(100,100),max_iter=1000,random_state=21)
     return model
 # read data
 def read_train_data(data_index_list):
@@ -73,12 +72,15 @@ def main():
     # data_index = "H4"
     # df = read_data(file_path,data_index)
     # get the training and testing data
-    window_size = 10
-    future_steps = 30
+    window_size = 30
+    future_steps = 10
     train_data = read_train_data(['H1','H2','H3'])
     test_data = read_test_data('H4')
     X_train, y_train = get_train_test_data(train_data,window_size=window_size,future_steps=future_steps)
     X_test, y_test = get_train_test_data(test_data,window_size=window_size,future_steps=future_steps)
+    X_train = X_train.reshape((X_train.shape[0], -1))
+    X_test = X_test.reshape((X_test.shape[0], -1))
+
     # build the model
     model = build_mlp_model()
     # train the model
@@ -86,12 +88,17 @@ def main():
     # evaluate the model
     mse = evaluate_model(model,X_test,y_test)
     print(f'Mean Squared Error:{mse}')
-    # save the model
-    model_file = 'mlp_model.sav'
-    save_model(model,model_file)
-    # load the model
-    model = load_model(model_file)
-    # evaluate the model
-    mse = evaluate_model(model,X_test,y_test)
-    print(f'Mean Squared Error:{mse}')
+    # predit the test set and write to the file in original format, like the ground truth data
+    y_pred = model.predict(X_test)
+    test_data_pred = test_data.copy()
+    test_data_pred.iloc[window_size+future_steps-1:,1:7] = y_pred
+    pred_file_path = "../point_cloud_data/MLP_pred/"
+    pred_file_name = f"H4_nav_MLP_pred{window_size}{future_steps}.csv"
+    # write the predicted data to the file, the file should have same column names as the ground truth data
+    # please check the column names in the ground truth data and use the same column names in the predicted data
+    test_data_pred.to_csv(pred_file_path+pred_file_name,index=False)
+
+
+if __name__ == '__main__':
+    main()
 

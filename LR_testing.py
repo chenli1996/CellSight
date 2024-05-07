@@ -38,7 +38,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 # generate graph voxel grid features
                 prefix = f'{pcd_name}_VS{voxel_size}_LR'
-                node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature{history}{future}.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data)
                 feature_num = len(column_name)
@@ -95,40 +95,54 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
 
 voxel_size = int(128)
 num_nodes = 240
-history,future=90,10
-p_start = 1
-p_end = 28
-output_size = 1
-train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
-          'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
-          'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
-test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-print('shape of test_x_LR:',test_x_LR.shape,'shape of test_y_LR:',test_y_LR.shape)
+# history = 10
+# for future in [1,10,30,60]:
+# history=90
+# for future in [1,10,30,60]:
+history = 30
+for future in [1]:
+    p_start = 1
+    p_end = 28
+    output_size = 1
+    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+    # print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
+    #         'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
+    #         'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
+    test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+    # print('shape of test_x_LR:',test_x_LR.shape,'shape of test_y_LR:',test_y_LR.shape)
+    print('shape of test_y:',test_y.shape,'shape of test_y_LR:',test_y_LR.shape)
 
-# test_x = torch.from_numpy(test_x)
-test_y = torch.from_numpy(test_y)
-test_y_LR = torch.from_numpy(test_y_LR)
-# get mse mae loss for LR on test data
-mae = MeanAbsoluteError()
-mape=MeanAbsolutePercentageError()
-mse=MeanSquaredError()
-if torch.cuda.is_available():
-    mae = mae.to('cuda')
-    mape = mape.to('cuda')
-    mse = mse.to('cuda')
-    test_y = test_y.to('cuda')
-    test_y_LR = test_y_LR.to('cuda')
-# import pdb;pdb.set_trace()
-MAE_list = []
-MSE_list = []
-u=future-1
-    # pass
-MAE_d = mae(test_y[:,u,:,:],test_y_LR[:,u,:,:]).cpu().detach().numpy()
-# MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-# import pdb;pdb.set_trace()
-MSE_d = mse(test_y[:, u, :, :].contiguous(), test_y_LR[:, u, :, :].contiguous()).cpu().detach().numpy()
-print(f'MAE:{MAE_d},MSE:{MSE_d}')
+    test_x = torch.from_numpy(test_x)
+    test_x_LR = torch.from_numpy(test_x_LR)
+    test_y = torch.from_numpy(test_y)
+    test_y_LR = torch.from_numpy(test_y_LR)
+
+    # get mse mae loss for LR on test data
+    mae = MeanAbsoluteError()
+    mape=MeanAbsolutePercentageError()
+    mse=MeanSquaredError()
+    if torch.cuda.is_available():
+        mae = mae.to('cuda')
+        mape = mape.to('cuda')
+        mse = mse.to('cuda')
+        test_y = test_y.to('cuda')
+        test_y_LR = test_y_LR.to('cuda')
+    # import pdb;pdb.set_trace()
+    MAE_list = []
+    MSE_list = []
+    u=future-1
+        # pass
+    MAE_d = mae(test_y[:,u,:,2:3],test_y_LR[:,u,:,2:3]).cpu().detach().numpy()
+    # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+    # import pdb;pdb.set_trace()
+    MSE_d = mse(test_y[:, u, :, 2:3].contiguous(), test_y_LR[:, u, :, 2:3].contiguous()).cpu().detach().numpy()
+    print(f'MAE:{MAE_d},MSE:{MSE_d},history:{history},future:{future}')
+    # print('sample test_y:',test_y[0,u,:,2:3].view(30,8),'sample test_y_LR:',test_y_LR[0,u,:,2:3].view(30,8))
+    # print('sample test_x:',test_x[0,u,:,2:3].view(30,8),'sample test_x_LR:',test_x_LR[0,u,:,2:3].view(30,8))
+    # import pdb;pdb.set_trace()
+    # clear memory
+    del test_x,test_y,test_y_LR,train_x,train_y,val_x,val_y
+
 
 
 

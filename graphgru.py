@@ -84,10 +84,10 @@ class GraphGRUCell(nn.Module):
         self.init_params()
         self.r1 = r1
         self.r2 = r2
-        self.GRU1 = GRULinear(100, 200, self.num_nodes,self.input_dim)
-        self.GRU2 = GRULinear(100, 100, self.num_nodes,self.input_dim)
+        self.GRU1 = GRULinear(self.num_units, 2 * self.num_units, self.num_nodes,self.input_dim)
+        self.GRU2 = GRULinear(self.num_units, self.num_units, self.num_nodes,self.input_dim)
         # self.GCN3 = GATConv(101, 100)
-        self.GCN3 = GATConv(100+self.input_dim, 100)
+        self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
     def init_params(self, bias_start=0.0):
         input_size = self.input_dim + self.num_units
         weight_0 = torch.nn.Parameter(torch.empty((input_size, 2 * self.num_units), device=self.device))
@@ -136,7 +136,7 @@ class GraphGRUCell(nn.Module):
         # import pdb;pdb.set_trace()
 
         state = torch.reshape(state, (batch_size, self.num_nodes, -1))  # (batch, self.num_nodes, self.gru_units)
-        inputs = torch.reshape(inputs, (batch_size, self.num_nodes, -1))
+        inputs = torch.reshape(inputs, (batch_size, self.num_nodes, -1)) # (batch, self.num_nodes, self.input_dim)
         inputs_and_state = torch.cat([state, inputs], dim=2)
         input_size = inputs_and_state.shape[2]
         x = inputs_and_state.to(self.device)
@@ -234,11 +234,88 @@ class GraphGRU(nn.Module):
     
 
 
-def eval(mymodel,test_loader,future):
+# def eval(mymodel,test_loader,future):
+#     mae = MeanAbsoluteError().cuda()
+#     mape=MeanAbsolutePercentageError().cuda()
+#     mse=MeanSquaredError().cuda()
+#     net = mymodel.eval().cuda()
+#     mse_list = []
+#     mae_list = []
+#     mape_list = []
+#     with torch.no_grad():
+#         for i,(batch_x, batch_y) in enumerate (test_loader):
+#             assert i == 0 # batch size is equal to the test set size
+#             batch_x=batch_x.cuda()
+#             batch_y=batch_y.cuda()
+#             outputs = net(batch_x)
+#             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+#             for u in range(future):
+#                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+#                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+#                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+#                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+#                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
+#                 mse_list.append(MSE/BAT_)
+#                 mae_list.append(MAE/BAT_)
+#                 mape_list.append(MAPE/BAT_)
+#         print('MSE:',mse_list)
+#         print('MAE:',mae_list)
+#         print('MAPE:',mape_list)
+#         # plot mse and mae
+#         plt.figure()
+#         plt.plot(mse_list)
+#         plt.plot(mae_list)
+#         # plt.plot(mape_list)
+#         plt.legend(['MSE', 'MAE'])
+#         plt.xlabel('Prediction Horizon/frame')
+#         plt.ylabel('Loss')
+#         plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png')                
+
+def eval_model(mymodel,test_x,test_y,history=90,future=60):
+    # history,future=90,60
+    # output_size = 1
+    # num_nodes = 240
+    # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
+    # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28)
+    # feature_num = test_x.shape[-1]
+    # input_size = feature_num
+    print('shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
+    # train_x = torch.from_numpy(train_x)
+    # train_y = torch.from_numpy(train_y)
+    test_x = torch.from_numpy(test_x)
+    test_y = torch.from_numpy(test_y)
+    batch_size=test_x.shape[0]
+    # batch_size=64
+    test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                            batch_size=batch_size,
+                                            shuffle=False)
+    # load graph edges
+    # voxel_size = int(256/2)
+    # edge_prefix = str(voxel_size)
+    # edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
+    # r1, r2 = getedge('newedge',900)
+    # r1, r2 = getedge(edge_path,4338)    
+    ##################################################分界线##########################################
+    # load model and test
+    # mymodel = GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2)
+    # # if best model is saved, load it
+    # # if os.path.exists(f'./data/model/best_model_checkpoint{history}_{future}.pt'):   
+    # best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
+    # # best_checkpoint_model_path = f'./data/model/best_model_checkpoint.pt' 
+    # if os.path.exists(best_checkpoint_model_path):   
+    #     mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
+    #     # mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
+    #     print(f'{best_checkpoint_model_path} model loaded')
+    # if torch.cuda.is_available():
+    #     mymodel=mymodel.cuda()
     mae = MeanAbsoluteError().cuda()
     mape=MeanAbsolutePercentageError().cuda()
     mse=MeanSquaredError().cuda()
     net = mymodel.eval().cuda()
+    mse_list = []
+    mae_list = []
+    mape_list = []
     with torch.no_grad():
         for i,(batch_x, batch_y) in enumerate (test_loader):
             assert i == 0 # batch size is equal to the test set size
@@ -252,46 +329,21 @@ def eval(mymodel,test_loader,future):
                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
-
-def eval_model():
-    history,future=150,60
-    output_size = 1
-    num_nodes = 240
-    # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users(history,future)
-    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28)
-    feature_num = train_x.shape[-1]
-    input_size = feature_num
-    print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
-    train_x = torch.from_numpy(train_x)
-    train_y = torch.from_numpy(train_y)
-    test_x = torch.from_numpy(test_x)
-    test_y = torch.from_numpy(test_y)
-    batch_size=test_x.shape[0]
-    # batch_size=64
-    test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=batch_size,
-                                            shuffle=False)
-    # load graph edges
-    voxel_size = int(256/2)
-    edge_prefix = str(voxel_size)
-    edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
-    # r1, r2 = getedge('newedge',900)
-    r1, r2 = getedge(edge_path,4338)    
-    ##################################################分界线##########################################
-    # load model and test
-    mymodel = GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2)
-    # if best model is saved, load it
-    # if os.path.exists(f'./data/model/best_model_checkpoint{history}_{future}.pt'):   
-    best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
-    # best_checkpoint_model_path = f'./data/model/best_model_checkpoint.pt' 
-    if os.path.exists(best_checkpoint_model_path):   
-        mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
-        # mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
-        print(f'{best_checkpoint_model_path} model loaded')
-    if torch.cuda.is_available():
-        mymodel=mymodel.cuda()
-    eval(mymodel,test_loader,future)
+                mse_list.append(MSE_d)
+                mae_list.append(MAE_d)
+                mape_list.append(MAPE_d)
+        print('MSE:',mse_list)
+        print('MAE:',mae_list)
+        print('MAPE:',mape_list)
+        # plot mse and mae
+        plt.figure()
+        plt.plot(mse_list)
+        plt.plot(mae_list)
+        # plt.plot(mape_list)
+        plt.legend(['MSE', 'MAE'])
+        plt.xlabel('Prediction Horizon/frame')
+        plt.ylabel('Loss')
+        plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png') 
 
 
 
@@ -299,13 +351,15 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=90,60
+    history,future=89,60
     p_start = 1
     p_end = 28
     output_size = 1
-    num_epochs=10
-    batch_size=32*4*2 #90 79GB
+    num_epochs=30
+    # batch_size=32*4*2 #90 79GB
+    batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
+    hidden_dim = 256
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
@@ -342,7 +396,7 @@ def main():
     feature_num = train_x.shape[-1]
     assert feature_num == 7
     input_size = feature_num
-    mymodel = GraphGRU(future,input_size,100,output_size,history,num_nodes,r1,r2)
+    mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2)
     # if best model is saved, load it
     best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
     if os.path.exists(best_checkpoint_model_path):   
@@ -420,54 +474,88 @@ def main():
     plt.ylabel('Loss')
     plt.savefig(f'./data/fig/graphgru_trainingloss{history}_{future}.png')
 
-    mae = MeanAbsoluteError().cuda()
-    mape=MeanAbsolutePercentageError().cuda()
-    mse=MeanSquaredError().cuda()
-    net = mymodel.eval().cuda()
+    # mae = MeanAbsoluteError().cuda()
+    # mape=MeanAbsolutePercentageError().cuda()
+    # mse=MeanSquaredError().cuda()
+    # load the best model
+    mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
+    # net = mymodel.eval().cuda()
 
-    mse_list = []
-    mae_list = []
-    mape_list = []
+    # mse_list = []
+    # mae_list = []
+    # mape_list = []
 
 
     with torch.no_grad():
-        if test_flag:
-            for i,(batch_x, batch_y) in enumerate (test_loader):
-                assert i == 0 # batch size is equal to the test set size
-                if torch.cuda.is_available():
-                    batch_x=batch_x.cuda()
-                    batch_y=batch_y.cuda()                    
-                outputs = net(batch_x)
-                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
-                for u in range(future):
-                    MAE=0
-                    MAPE=0
-                    MSE=0
-                    BAT_=0            
-                    MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-                    MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()                    
-                    # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-                    MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
-                    MAE+=MAE_d
-                    MAPE+=MAPE_d
-                    MSE+=MSE_d
-                    BAT_+=1
-                    print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
-                    mse_list.append(MSE/BAT_)
-                    mae_list.append(MAE/BAT_)
-                    mape_list.append(MAPE/BAT_)
-    print('MSE:',mse_list)
-    print('MAE:',mae_list)
-    print('MAPE:',mape_list)
-    # plot mse and mae
-    plt.figure()
-    plt.plot(mse_list)
-    plt.plot(mae_list)
-    # plt.plot(mape_list)
-    plt.legend(['MSE', 'MAE'])
-    plt.xlabel('Prediction Horizon/frame')
-    plt.ylabel('Loss')
-    plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png')
+        eval_model(mymodel,test_x,test_y,history=history,future=future)
+    #     if test_flag:
+    #         for i,(batch_x, batch_y) in enumerate (test_loader):
+    #             assert i == 0 # batch size is equal to the test set size
+    #             if torch.cuda.is_available():
+    #                 batch_x=batch_x.cuda()
+    #                 batch_y=batch_y.cuda()                    
+    #             outputs = net(batch_x)
+    #             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+    #             for u in range(future):
+    #                 MAE=0
+    #                 MAPE=0
+    #                 MSE=0
+    #                 BAT_=0            
+    #                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+    #                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()                    
+    #                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+    #                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+    #                 MAE+=MAE_d
+    #                 MAPE+=MAPE_d
+    #                 MSE+=MSE_d
+    #                 BAT_+=1
+    #                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE/BAT_, MAPE/BAT_,MSE/BAT_))
+    #                 mse_list.append(MSE/BAT_)
+    #                 mae_list.append(MAE/BAT_)
+    #                 mape_list.append(MAPE/BAT_)
+    # print('MSE:',mse_list)
+    # print('MAE:',mae_list)
+    # print('MAPE:',mape_list)
+    # # plot mse and mae
+    # plt.figure()
+    # plt.plot(mse_list)
+    # plt.plot(mae_list)
+    # # plt.plot(mape_list)
+    # plt.legend(['MSE', 'MAE'])
+    # plt.xlabel('Prediction Horizon/frame')
+    # plt.ylabel('Loss')
+    # plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png')
 if __name__ == '__main__':
     main()
+    
+    
+    # future = 60
+    # history = 90
+    # output_size = 1
+    # num_nodes = 240
+    # p_start = 1
+    # p_end = 28
+    # hidden_dim = 200
+    # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end)
+    # feature_num = test_x.shape[-1]
+    # # load graph edges
+    # voxel_size = int(256/2)
+    # edge_prefix = str(voxel_size)
+    # edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
+    # r1, r2 = getedge('newedge',900)
+    # r1, r2 = getedge(edge_path,4338)    
+    # #################################################分界线##########################################
+    # # load model and test
+    # mymodel = GraphGRU(future,feature_num,hidden_dim,output_size,history,num_nodes,r1,r2)
+    # # if best model is saved, load it
+    # # if os.path.exists(f'./data/model/best_model_checkpoint{history}_{future}.pt'):   
+    # best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
+    # # best_checkpoint_model_path = f'./data/model/best_model_checkpoint.pt' 
+    # if os.path.exists(best_checkpoint_model_path):   
+    #     mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
+    #     # mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
+    #     print(f'{best_checkpoint_model_path} model loaded')
+    # if torch.cuda.is_available():
+    #     mymodel=mymodel.cuda()
+    # eval_model(mymodel,test_x,test_y,history=90,future=60)
     # eval_model()
