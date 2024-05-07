@@ -2,6 +2,7 @@ import numpy as np
 from node_feature_utils import parse_trajectory_data
 import matplotlib.pyplot as plt
 import pandas as pd
+from tqdm import tqdm
 
 def linear_regression(x, y):
     """
@@ -99,50 +100,54 @@ def predict_next_state_tlp_rad(user_data, window_size=2,dof=6,future_steps = 1):
 # print("Predicted next state using the last 30 states:", next_state)
 
 # read ground truth data
-window_size_lr = 5
-future_steps =5
+window_size_lr = 90
+# future_steps =150
 file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
-file_name = 'H4_nav.csv'
-# user_index = 'P01_V1'
+data_index = "H4"
+file_name = f'{data_index}_nav.csv'
 pred_file_path = "../point_cloud_data/LR_pred/"
-pred_file_name = "H4_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
 
-for user_index_i in range(1,28):
-    user_index = 'P'+str(user_index_i).zfill(2)+'_V1'
-    trajectory_positions, trajectory_orientations = parse_trajectory_data(file_path+file_name,user_index=user_index)
-    # print(trajectory_positions.shape)
-    begin_frame_index = 0
-    end_frame_index = trajectory_positions.shape[0]-1
-    # end_frame_index = 120
-    dof = 3
-    predicted_trajectory_positions = np.zeros(trajectory_positions[begin_frame_index:end_frame_index+1,:].shape)
-    predicted_trajectory_orientations = np.zeros(trajectory_orientations[begin_frame_index:end_frame_index+1,:].shape)
-    for frame_index in range(begin_frame_index+window_size_lr,end_frame_index+1 -future_steps +1):
-        future_state = predict_next_state_tlp(trajectory_positions[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=future_steps)
-        predicted_trajectory_positions[frame_index+future_steps -1] = future_state
-        future_state = predict_next_state_tlp_rad(trajectory_orientations[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=1)
-        predicted_trajectory_orientations[frame_index+future_steps -1] = future_state
-        
-        
-    
-    gt_df = pd.read_csv(file_path+file_name)
-    gt_df = gt_df[gt_df['Participant'] == user_index]
-    # save gt data
-    gt_file_path = "../point_cloud_data/LR_pred/H4_nav_gt.csv"
-    gt_df.to_csv(gt_file_path,index=False)
+for future_steps in [1,30,40,60,90,150]:
+    pred_file_name = f"{data_index}_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
+    diff_file_name = f"{data_index}_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
+    gt_file_name = f"{data_index}_nav_gt.csv"
+    gt_df_all = []
+    df_pred_all = []
+    diff_all = []
+    for user_index_i in tqdm(range(1,28)):
+        user_index = 'P'+str(user_index_i).zfill(2)+'_V1'
+        trajectory_positions, trajectory_orientations = parse_trajectory_data(file_path+file_name,user_index=user_index)
+        # print(trajectory_positions.shape)
+        begin_frame_index = 0
+        end_frame_index = trajectory_positions.shape[0]-1
+        # end_frame_index = 120
+        dof = 3
+        predicted_trajectory_positions = np.zeros(trajectory_positions[begin_frame_index:end_frame_index+1,:].shape)
+        predicted_trajectory_orientations = np.zeros(trajectory_orientations[begin_frame_index:end_frame_index+1,:].shape)
+        for frame_index in range(begin_frame_index+window_size_lr,end_frame_index+1 -future_steps +1):
+            future_state = predict_next_state_tlp(trajectory_positions[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=future_steps)
+            predicted_trajectory_positions[frame_index+future_steps -1] = future_state
+            future_state = predict_next_state_tlp_rad(trajectory_orientations[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=1)
+            predicted_trajectory_orientations[frame_index+future_steps -1] = future_state
+        gt_df = pd.read_csv(file_path+file_name)
+        gt_df = gt_df[gt_df['Participant'] == user_index]
+        # initialize df as gt_df copy and replace with the predicted data, we want to keep the original other columns and format
+        df = gt_df.copy()
+        df.iloc[0:end_frame_index+1,1:4] = predicted_trajectory_positions
+        df.iloc[0:end_frame_index+1,4:7] = predicted_trajectory_orientations
+        df_pred = df
+        # get the difference between the predicted and ground truth data
+        diff = df_pred.iloc[0:end_frame_index+1,1:7] - gt_df.iloc[0:end_frame_index+1,1:7]    
+        diff.to_csv(pred_file_path+ diff_file_name, index=False)
+        gt_df_all.append(gt_df)
+        df_pred_all.append(df_pred)
+        diff_all.append(diff)
+    # concatenate all the dataframes
+    gt_df_all = pd.concat(gt_df_all)
+    df_pred_all = pd.concat(df_pred_all)
+    diff_all = pd.concat(diff_all)
+    # write the concatenated dataframes to a file
+    gt_df_all.to_csv(pred_file_path+gt_file_name,index=False)
+    df_pred_all.to_csv(pred_file_path+pred_file_name,index=False)
+    diff_all.to_csv(pred_file_path+diff_file_name, index=False)
 
-    # initialize df as gt_df copy and replace with the predicted data, we want to keep the original other columns and format
-    df = gt_df.copy()
-    df.iloc[0:end_frame_index+1,1:4] = predicted_trajectory_positions
-    df.iloc[0:end_frame_index+1,4:7] = predicted_trajectory_orientations
-    df_pred = df
-    df_pred
-
-    # get the difference between the predicted and ground truth data
-    diff = df_pred.iloc[0:end_frame_index+1,1:7] - gt_df.iloc[0:end_frame_index+1,1:7]
-    # write the difference to a file
-    # diff_file_path = "../point_cloud_data/LR_pred/"
-    diff_file_name = "H4_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
-    diff.to_csv(pred_file_path+ diff_file_name, index=False)
-    # write the predicted data to a file
-    df_pred.to_csv(pred_file_path+pred_file_name,index=False)

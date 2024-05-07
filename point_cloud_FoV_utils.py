@@ -374,6 +374,22 @@ def get_point_cloud_user_trajectory(pcd_name='longdress', participant='P03_V1'):
 
     return positions, orientations
 
+def get_point_cloud_user_trajectory_LR(pcd_name='longdress', participant='P03_V1',history=90,future=30):
+    data_path = "../point_cloud_data/LR_pred/"
+    file_mapping = {
+        'longdress': f'H1_nav_pred{history}{future}.csv',
+        'loot': f'H2_nav_pred{history}{future}.csv',
+        'redandblack': f'H3_nav_pred{history}{future}.csv',
+        'soldier': f'H4_nav_pred{history}{future}.csv'
+    }
+    file_name = file_mapping[pcd_name]
+    # if file_name is None:
+        # raise ValueError(f"Invalid point cloud name: {pcd_name}")
+    positions, orientations = parse_trajectory_data(data_path + file_name, user_index=participant)
+    # get the centroid of the positions
+
+    return positions, orientations
+
 if __name__ == '__main__':
 #   the following code is for testing the in-FoV and draw intrinsic and extrinsic matrix functions
 

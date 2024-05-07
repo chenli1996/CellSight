@@ -77,8 +77,9 @@ def generate_node_feature():
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
-    for pcd_name in ['longdress','loot','redandblack']:
-        prefix = f'{pcd_name}_VS{voxel_size}'
+    # for pcd_name in ['longdress','loot','redandblack']:
+    for pcd_name in ['soldier']:
+        prefix = f'{pcd_name}_VS{voxel_size}_LR'
         for user_i in tqdm(range(1,28)):
             participant = 'P'+str(user_i).zfill(2)+'_V1'
             node_index = []
@@ -87,8 +88,8 @@ def generate_node_feature():
             occlusion_feature = []
             distance_feature = []
             coordinate_feature = []
-            positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
-
+            # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
+            positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=90,future=30)
             for trajectory_index in tqdm(range((len(positions)))):
                 # print(f'Processing trajectory {trajectory_index}...')
                 # Load the point cloud data
