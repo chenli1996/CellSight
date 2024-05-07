@@ -100,7 +100,7 @@ def predict_next_state_tlp_rad(user_data, window_size=2,dof=6,future_steps = 1):
 # print("Predicted next state using the last 30 states:", next_state)
 
 # read ground truth data
-window_size_lr = 90
+window_size_lr = 10
 # future_steps =150
 file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
 data_index = "H4"
@@ -108,7 +108,7 @@ file_name = f'{data_index}_nav.csv'
 pred_file_path = "../point_cloud_data/LR_pred/"
 
 # for future_steps in [1,30,40,60,90,150]:
-for future_steps in [10]:
+for future_steps in [10,30,60,90,150]:
     pred_file_name = f"{data_index}_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
     diff_file_name = f"{data_index}_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
     gt_file_name = f"{data_index}_nav_gt.csv"

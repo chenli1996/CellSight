@@ -79,10 +79,10 @@ def generate_node_feature():
     original_index_to_integer_index = results['original_index_to_integer_index']
     # for pcd_name in ['longdress','loot','redandblack']:
     for pcd_name in ['soldier']:
-        history = 90
-        future = 1
-        prefix = f'{pcd_name}_VS{voxel_size}_LR'
-        for user_i in tqdm(range(1,28)):
+        history = 10
+        future = 30
+        prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
+        for user_i in tqdm(range(1,15)):  # LR is 15 for testing***********************************************
             participant = 'P'+str(user_i).zfill(2)+'_V1'
             node_index = []
             occupancy_feature = []
