@@ -24,8 +24,8 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
     # val_start = 27
     # val_end = 28
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
-    # pcd_name_list = ['longdress','loot','redandblack','soldier']
-    pcd_name_list = ['soldier']
+    pcd_name_list = ['longdress','loot','redandblack','soldier']
+    # pcd_name_list = ['soldier']
     # column_name ['occlusion_feature']
     def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
         # p_start = p_start + start_bias
@@ -74,7 +74,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
     else:
         print('generate data from files')
         # train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
-        test_x,test_y = get_train_test_data(pcd_name_list[0],p_start=p_start,p_end=int(p_end/2)+1)
+        test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
         # val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
         
         # save data to file with prefix is all_videos
@@ -95,7 +95,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
 
 voxel_size = int(128)
 num_nodes = 240
-history,future=90,30
+history,future=90,10
 p_start = 1
 p_end = 28
 output_size = 1
@@ -119,12 +119,18 @@ if torch.cuda.is_available():
     mse = mse.to('cuda')
     test_y = test_y.to('cuda')
     test_y_LR = test_y_LR.to('cuda')
-import pdb;pdb.set_trace()
-for u in range(future):
-    pass
-    # mae.update(test_y[:,u,:,:],test_y_LR[:,u])
-    # mape.update(test_y[:,u],test_y_LR[:,u])
-    # mse.update(test_y[:,u],test_y_LR[:,u])
+# import pdb;pdb.set_trace()
+MAE_list = []
+MSE_list = []
+u=future-1
+    # pass
+MAE_d = mae(test_y[:,u,:,:],test_y_LR[:,u,:,:]).cpu().detach().numpy()
+# MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+# import pdb;pdb.set_trace()
+MSE_d = mse(test_y[:, u, :, :].contiguous(), test_y_LR[:, u, :, :].contiguous()).cpu().detach().numpy()
+print(f'MAE:{MAE_d},MSE:{MSE_d}')
+
+
 
 
 
