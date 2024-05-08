@@ -271,7 +271,7 @@ class GraphGRU(nn.Module):
 #         plt.ylabel('Loss')
 #         plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png')                
 
-def eval_model(mymodel,test_x,test_y,history=90,future=60):
+def eval_model(mymodel,test_loader,history=90,future=60):
     # history,future=90,60
     # output_size = 1
     # num_nodes = 240
@@ -279,17 +279,12 @@ def eval_model(mymodel,test_x,test_y,history=90,future=60):
     # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28)
     # feature_num = test_x.shape[-1]
     # input_size = feature_num
-    print('shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
+    # print('shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
     # train_x = torch.from_numpy(train_x)
     # train_y = torch.from_numpy(train_y)
-    test_x = torch.from_numpy(test_x)
-    test_y = torch.from_numpy(test_y)
-    batch_size=test_x.shape[0]
-    # batch_size=64
-    test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=batch_size,
-                                            shuffle=False)
+    # test_x = torch.from_numpy(test_x)
+    # test_y = torch.from_numpy(test_y)
+
     # load graph edges
     # voxel_size = int(256/2)
     # edge_prefix = str(voxel_size)
@@ -329,9 +324,10 @@ def eval_model(mymodel,test_x,test_y,history=90,future=60):
                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
-                mse_list.append(MSE_d)
-                mae_list.append(MAE_d)
-                mape_list.append(MAPE_d)
+                # import pdb;pdb.set_trace()
+                mse_list.append(MSE_d.item())
+                mae_list.append(MAE_d.item())
+                mape_list.append(MAPE_d.item())
         print('MSE:',mse_list)
         print('MAE:',mae_list)
         print('MAPE:',mape_list)
@@ -351,15 +347,16 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=89,60
+    history,future=30,10
     p_start = 1
     p_end = 28
     output_size = 1
     num_epochs=30
+    batch_size=32*16 # 30
     # batch_size=32*4*2 #90 79GB
-    batch_size=64 # 256 model
+    # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
-    hidden_dim = 256
+    hidden_dim = 100
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
@@ -487,7 +484,7 @@ def main():
 
 
     with torch.no_grad():
-        eval_model(mymodel,test_x,test_y,history=history,future=future)
+        eval_model(mymodel,test_loader,history=history,future=future)
     #     if test_flag:
     #         for i,(batch_x, batch_y) in enumerate (test_loader):
     #             assert i == 0 # batch size is equal to the test set size
@@ -535,27 +532,29 @@ if __name__ == '__main__':
     # num_nodes = 240
     # p_start = 1
     # p_end = 28
-    # hidden_dim = 200
+    # hidden_dim = 100
     # train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end)
+    # print('shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape)
+    # test_x = torch.from_numpy(test_x)
+    # test_y = torch.from_numpy(test_y)
+    # batch_size=test_x.shape[0]
+    # test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+    # test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+    #                                         batch_size=batch_size,
+    #                                         shuffle=False)
     # feature_num = test_x.shape[-1]
     # # load graph edges
     # voxel_size = int(256/2)
     # edge_prefix = str(voxel_size)
     # edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
-    # r1, r2 = getedge('newedge',900)
     # r1, r2 = getedge(edge_path,4338)    
-    # #################################################分界线##########################################
     # # load model and test
     # mymodel = GraphGRU(future,feature_num,hidden_dim,output_size,history,num_nodes,r1,r2)
     # # if best model is saved, load it
-    # # if os.path.exists(f'./data/model/best_model_checkpoint{history}_{future}.pt'):   
     # best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
-    # # best_checkpoint_model_path = f'./data/model/best_model_checkpoint.pt' 
     # if os.path.exists(best_checkpoint_model_path):   
     #     mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
-    #     # mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
     #     print(f'{best_checkpoint_model_path} model loaded')
     # if torch.cuda.is_available():
     #     mymodel=mymodel.cuda()
-    # eval_model(mymodel,test_x,test_y,history=90,future=60)
-    # eval_model()
+    # eval_model(mymodel,test_loader,history=history,future=future)
