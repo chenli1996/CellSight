@@ -98,7 +98,7 @@ class GraphGRUCell(nn.Module):
         self.head = 1
         self.multiGAT = False
         self.dropout = 0.2
-        self.OriginalGAT = False
+        self.OriginalGAT = True
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
         if self.OriginalGAT:
             self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=True)
@@ -424,7 +424,7 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=90,60
+    history,future=90,150
     # history,future=10,1
     p_start = 1
     p_end = 28
@@ -436,9 +436,9 @@ def main():
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
     # batch_size=25 #G2 T h2
-    batch_size=64 #T1 h1 fulledge
+    batch_size=128 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'T1_h1_lre43_fulledge_{hidden_dim}'
+    model_prefix = f'G1_h1_lre43_90_150_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
