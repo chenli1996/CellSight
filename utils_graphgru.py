@@ -98,10 +98,12 @@ def get_val_loss(mymodel,val_loader,criterion):
     val_loss = val_loss/iter2
     return val_loss   
 
-def getedge(x,edge_number):
-    df = pd.read_csv(x, nrows=edge_number)
+def getedge(x):
+    # df = pd.read_csv(x, nrows=edge_number)
+    df = pd.read_csv(x)
+    # import pdb;pdb.set_trace()
     # get the df where edge_feature is 1
-    df = df[df['edge_feature']==1]
+    # df = df[df['edge_feature']==1]
     r1 = df.loc[:, 'start_node'].values
     r2 = df.loc[:, 'end_node'].values
     return r1, r2

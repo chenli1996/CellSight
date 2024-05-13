@@ -7,22 +7,26 @@ from torch.autograd import Variable
 from torchmetrics import MeanAbsoluteError
 from torchmetrics import MeanAbsolutePercentageError
 from torchmetrics import MeanSquaredError
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATConv,GATv2Conv,TransformerConv
 from torch_geometric.data import Data,Batch
 from tqdm import tqdm
 from time import time
 import os
 from utils_graphgru import *
 import matplotlib.pyplot as plt
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.profiler import profile, record_function, ProfilerActivity
 
+# torch.autograd.set_detect_anomaly(True)
 
 
 # torch.set_default_tensor_type(torch.DoubleTensor)
 # set to float32
 # torch.set_default_dtype(torch.float32)
 # torch.set_default_device()
-torch.set_default_tensor_type(torch.FloatTensor)
+# torch.set_default_tensor_type(torch.FloatTensor)
+torch.set_default_dtype(torch.float32)
+# torch.set_default_device('cpu')  # or 'cuda' if you're using a GPU
 # torch.set
 
 #######################################################
@@ -74,11 +78,12 @@ class GRULinear(nn.Module):
         }
 
 class GraphGRUCell(nn.Module):
-    def __init__(self, num_units, num_nodes, r1,r2, device, input_dim=1):
+    def __init__(self, num_units, num_nodes, r1,r2, batch_size,device, input_dim=1):
         super(GraphGRUCell, self).__init__()
         self.num_units = num_units
         self.num_nodes = num_nodes
         self.input_dim = input_dim
+        self.batch_size = batch_size
         self.device = device
         self.act = torch.tanh
         self.init_params()
@@ -87,7 +92,25 @@ class GraphGRUCell(nn.Module):
         self.GRU1 = GRULinear(self.num_units, 2 * self.num_units, self.num_nodes,self.input_dim)
         self.GRU2 = GRULinear(self.num_units, self.num_units, self.num_nodes,self.input_dim)
         # self.GCN3 = GATConv(101, 100)
-        self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
+        # Precompute edge_index_expanded
+        self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
+
+        self.head = 1
+        self.multiGAT = False
+        self.dropout = 0.2
+        self.OriginalGAT = False
+        # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
+        if self.OriginalGAT:
+            self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=True)
+            self.GCN4 = GATConv(self.num_units*self.head,self.num_units,concat=False)
+        else:
+            # self.GAT3 = GATv2Conv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
+            # self.GAT4 = GATv2Conv(self.num_units*self.head,self.num_units,concat=False)
+
+            self.GAT3 = TransformerConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=True)
+            self.GAT4 = TransformerConv(self.num_units*self.head,self.num_units,concat=False)
+
+
     def init_params(self, bias_start=0.0):
         input_size = self.input_dim + self.num_units
         weight_0 = torch.nn.Parameter(torch.empty((input_size, 2 * self.num_units), device=self.device))
@@ -107,6 +130,22 @@ class GraphGRUCell(nn.Module):
 
         self.weigts = {weight_0.shape: weight_0, weight_1.shape: weight_1}
         self.biases = {bias_0.shape: bias_0, bias_1.shape: bias_1}
+
+    def precompute_edge_index(self, batch_size=None):
+        edge_index = torch.tensor(np.stack((np.array(self.r1),np.array(self.r2))), dtype=torch.long).to(self.device)
+        # Ensure edge_index is on the GPU
+        edge_index = edge_index.to(self.device)
+        
+        # Replicate edge_index for each graph in the batch
+        edge_index_expanded = edge_index.repeat(1, batch_size)
+        
+        # Create edge_index_offsets directly on the GPU
+        edge_index_offsets = torch.arange(batch_size, device=self.device).repeat_interleave(edge_index.size(1)) * self.num_nodes
+        
+        # Add the offsets to edge_index_expanded
+        edge_index_expanded += edge_index_offsets
+        
+        return edge_index_expanded        
 
     def forward(self, inputs, state):
         # inputs (batch_size, num_nodes * input_dim)
@@ -142,9 +181,9 @@ class GraphGRUCell(nn.Module):
         x = inputs_and_state.to(self.device)
         # edge_index = torch.tensor([self.r1, self.r2], dtype=torch.long).to(self.device)
         # import pdb;pdb.set_trace()
-        edge_index = torch.tensor(np.stack((np.array(self.r1),np.array(self.r2))), dtype=torch.long).to(self.device)
+        
         # import pdb;pdb.set_trace()
-        b=[]
+        # b=[]
         # for i in x:
         #   x111=Data(x=i,edge_index=edge_index)
         #   xx=self.GCN3(x111.x,x111.edge_index)
@@ -153,24 +192,61 @@ class GraphGRUCell(nn.Module):
 
         # Assuming x is a list of node feature tensors and edge_index is shared
         # Create a list of Data objects
-        data_list = [Data(x=feat, edge_index=edge_index) for feat in x]
+        # edge_index = torch.tensor([self.r1, self.r2], dtype=torch.long).to(self.device)
+        # data_list = [Data(x=feat, edge_index=edge_index) for feat in x]
 
         # Use Batch to process all Data objects at once
-        batch = Batch.from_data_list(data_list)
-
+        # batch1 = Batch.from_data_list(data_list)
         # Now pass the batched graph to your model
-        # import pdb;pdb.set_trace()
-        batch_output = self.GCN3(batch.x, batch.edge_index)
-        x1 = batch_output
+        # batch_output1 = self.GCN3(batch1.x, batch1.edge_index)
 
-        biases = self.biases[(output_size,)]
-        x1 += biases
-        x1 = x1.reshape(shape=(batch_size, self.num_nodes* output_size))
-        return x1
+        # Flatten the input tensor and create a large batch of node features
+        batch_size, num_nodes, num_features = x.size()
+        x_flat = x.view(-1, num_features)  # Shape: (batch_size * num_nodes, num_features)
+
+        # # Replicate edge_index for each graph in the batch
+        # edge_index_expanded = edge_index.repeat(1, batch_size)
+        # edge_index_offsets = torch.arange(batch_size).repeat_interleave(edge_index.size(1)) * num_nodes
+        # edge_index_expanded += edge_index_offsets.to(self.device)
+
+        # Create a single Data object and then batch it
+        if batch_size == self.batch_size:
+            edge_index = self.edge_index_expanded
+        else:
+            # last batch may have fewer samples
+            edge_index = self.precompute_edge_index(batch_size)
+        data = Data(x=x_flat, edge_index=edge_index)
+        batch = Batch.from_data_list([data])
+        # import pdb;pdb.set_trace()
+        # Pass the batched graph to the model
+        if self.OriginalGAT:
+            if self.multiGAT:
+                x = self.GCN3(batch.x, batch.edge_index)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout)
+                x = self.GCN4(x, batch.edge_index)
+                x = F.relu(x)
+            else:
+                x = self.GCN3(batch.x, batch.edge_index)
+        else:
+            if self.multiGAT:
+                x = self.GAT3(batch.x, batch.edge_index)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout)
+                x = self.GAT4(x, batch.edge_index)
+                x = F.relu(x)
+            else:
+                x = self.GAT3(batch.x, batch.edge_index)
+
+        # biases = self.biases[(output_size,)]
+        # x += biases
+        x = x.reshape(shape=(batch_size, self.num_nodes* output_size))
+        # import pdb;pdb.set_trace()
+        return x
 
 
 class GraphGRU(nn.Module):
-    def __init__(self,future, input_size, hidden_size, output_dim,history,num_nodes,r1,r2):
+    def __init__(self,future, input_size, hidden_size, output_dim,history,num_nodes,r1,r2,batch_size=128):
         super(GraphGRU, self).__init__()
         self.num_nodes = num_nodes
         self.input_dim =input_size
@@ -178,6 +254,7 @@ class GraphGRU(nn.Module):
         self.gru_units = hidden_size
         self.r1 = r1
         self.r2 = r2
+        self.batch_size = batch_size
         self.input_window = history
         self.output_window = future
         self.device = torch.device('cuda')
@@ -186,8 +263,8 @@ class GraphGRU(nn.Module):
             self.device = torch.device('cpu')
 
         # -------------------构造模型-----------------------------
-        self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.r1, self.r2, self.device, self.input_dim)
-        self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.device, self.input_dim)
+        self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.r1, self.r2, self.batch_size, self.device, self.input_dim)
+        self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.input_dim)
         self.fc1 = nn.Linear(self.gru_units*2, 120)
         #self.output_model = nn.Linear(self.gru_units*2, self.output_window * self.output_dim)
         self.output_model = nn.Linear(120, self.output_window * self.output_dim)
@@ -271,7 +348,7 @@ class GraphGRU(nn.Module):
 #         plt.ylabel('Loss')
 #         plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png')                
 
-def eval_model(mymodel,test_loader,history=90,future=60):
+def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
     # history,future=90,60
     # output_size = 1
     # num_nodes = 240
@@ -330,7 +407,7 @@ def eval_model(mymodel,test_loader,history=90,future=60):
                 mape_list.append(MAPE_d.item())
         print('MSE:',mse_list)
         print('MAE:',mae_list)
-        print('MAPE:',mape_list)
+        # print('MAPE:',mape_list)
         # plot mse and mae
         plt.figure()
         plt.plot(mse_list)
@@ -339,7 +416,7 @@ def eval_model(mymodel,test_loader,history=90,future=60):
         plt.legend(['MSE', 'MAE'])
         plt.xlabel('Prediction Horizon/frame')
         plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/graphgru_testingloss{history}_{future}.png') 
+        plt.savefig(f'./data/fig/graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
 
@@ -347,16 +424,20 @@ def main():
     test_flag = True
     voxel_size = int(128)
     num_nodes = 240
-    history,future=30,10
+    history,future=90,60
+    # history,future=10,1
     p_start = 1
     p_end = 28
+    # p_end = 4
     output_size = 1
     num_epochs=30
-    batch_size=32*16 # 30
+    # batch_size=32*16 # 30
     # batch_size=32*4*2 #90 79GB
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
+    batch_size=64
     hidden_dim = 100
+    model_prefix = f'G1_T_h1_lre43_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
@@ -389,13 +470,13 @@ def main():
     edge_prefix = str(voxel_size)
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
     # r1, r2 = getedge('newedge',900)
-    r1, r2 = getedge(edge_path,4338)
+    r1, r2 = getedge(edge_path)
     feature_num = train_x.shape[-1]
     assert feature_num == 7
     input_size = feature_num
-    mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2)
+    mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2,batch_size)
     # if best model is saved, load it
-    best_checkpoint_model_path = f'./data/model/best_model_checkpoint{history}_{future}.pt' 
+    best_checkpoint_model_path = f'./data/model/best_model_{model_prefix}_checkpoint{history}_{future}.pt' 
     if os.path.exists(best_checkpoint_model_path):   
         mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
         print(f'{best_checkpoint_model_path} model loaded')
@@ -404,13 +485,16 @@ def main():
     # print(mymodel)
     
     learning_rate=0.0003
+    # learning_rate = 0.0001
     criterion = torch.nn.MSELoss()    # mean-squared error for regression
+    # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
     optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
+    # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
     lossa=[]
     val_loss_list = []
 
     # Initialize the early stopping object
-    early_stopping = EarlyStopping(patience=3, verbose=True, path=f'./data/model/best_model_checkpoint{history}_{future}.pt')
+    early_stopping = EarlyStopping(patience=5, verbose=True, path=best_checkpoint_model_path)
 
     for epochs in range(1,num_epochs+1):
         mymodel.train()
@@ -437,6 +521,9 @@ def main():
             loss.backward()
             optimizer.step()
             iter1+=1
+            # print loss
+            if i % 10 == 0:
+                print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
         # Print profiler results
         # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
         # break                          
@@ -444,11 +531,11 @@ def main():
         loss_avg = loss_total/iter1
         losss=loss_avg
         lossa.append(losss)
-        print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg))
+        print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg),flush=True)
         # save model every 10 epochs and then reload it to continue training
         if epochs % 10 == 0:
             #save and reload
-            torch.save(mymodel.state_dict(), f'./data/model/graphgru{history}_{future}_{epochs}.pt')
+            torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
             print('model saved')
         val_loss = get_val_loss(mymodel,val_loader,criterion)
         val_loss_list.append(val_loss)
@@ -459,8 +546,8 @@ def main():
             print("Early stopping")
             break
 
-    np.save(f'./data/output/graphgru_training_loss{history}_{future}',lossa)
-    np.save(f'./data/output/graphgru_val_loss{history}_{future}',val_loss_list)
+    np.save(f'./data/output/graphgru_{model_prefix}_training_loss{history}_{future}',lossa)
+    np.save(f'./data/output/graphgru_{model_prefix}_val_loss{history}_{future}',val_loss_list)
     print('loss saved')
     # plot training and val loss and save to file
     plt.figure()
@@ -469,13 +556,13 @@ def main():
     plt.legend(['Training Loss', 'Validation Loss'])
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.savefig(f'./data/fig/graphgru_trainingloss{history}_{future}.png')
+    plt.savefig(f'./data/fig/graphgru_{model_prefix}_trainingloss{history}_{future}.png')
 
     # mae = MeanAbsoluteError().cuda()
     # mape=MeanAbsolutePercentageError().cuda()
     # mse=MeanSquaredError().cuda()
     # load the best model
-    mymodel.load_state_dict(torch.load(f'./data/model/best_model_checkpoint{history}_{future}.pt'))
+    mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
     # net = mymodel.eval().cuda()
 
     # mse_list = []
@@ -484,7 +571,7 @@ def main():
 
 
     with torch.no_grad():
-        eval_model(mymodel,test_loader,history=history,future=future)
+        eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
     #     if test_flag:
     #         for i,(batch_x, batch_y) in enumerate (test_loader):
     #             assert i == 0 # batch size is equal to the test set size

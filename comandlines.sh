@@ -7,3 +7,6 @@ mv ./data ../point_cloud_FoV_Graph
 
 # copy *9060* to ssh greene.hpc.nyu.edu:/scratch/cl5089/point_cloud_FoV_Graph/data/soldier_VS128_LR
 scp ./*9060* greene.hpc.nyu.edu:/scratch/cl5089/point_cloud_FoV_Graph/data/soldier_VS128_LR
+
+# run nvidia-smi and watch every 0.1s
+watch -n 0.1 nvidia-smi
