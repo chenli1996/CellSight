@@ -435,9 +435,10 @@ def main():
     # batch_size=32*4*2 #90 79GB
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
-    batch_size=64
+    # batch_size=25 #G2 T h2
+    batch_size=64 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'G1_T_h1_lre43_fulledge_{hidden_dim}'
+    model_prefix = f'T1_h1_lre43_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
@@ -494,7 +495,8 @@ def main():
     val_loss_list = []
 
     # Initialize the early stopping object
-    early_stopping = EarlyStopping(patience=5, verbose=True, path=best_checkpoint_model_path)
+    # early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=0.009612, path=best_checkpoint_model_path) #continue training the best check point
+    early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
 
     for epochs in range(1,num_epochs+1):
         mymodel.train()
@@ -539,7 +541,7 @@ def main():
             print('model saved')
         val_loss = get_val_loss(mymodel,val_loader,criterion)
         val_loss_list.append(val_loss)
-        # print("val_loss:%1.5f" % (val_loss))
+        print("val_loss:%1.5f" % (val_loss))
         # Call early stopping
         early_stopping(val_loss, mymodel)
         if early_stopping.early_stop:

@@ -100,7 +100,7 @@ num_nodes = 240
 # history=90
 # for future in [1,10,30,60]:
 history = 30
-for future in [1]:
+for future in [150]:
     p_start = 1
     p_end = 28
     output_size = 1
@@ -108,12 +108,14 @@ for future in [1]:
     # print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
     #         'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
     #         'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
+    del train_x,train_y,val_x,val_y,test_x
     test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     # print('shape of test_x_LR:',test_x_LR.shape,'shape of test_y_LR:',test_y_LR.shape)
+    del test_x_LR
     print('shape of test_y:',test_y.shape,'shape of test_y_LR:',test_y_LR.shape)
 
-    test_x = torch.from_numpy(test_x)
-    test_x_LR = torch.from_numpy(test_x_LR)
+    # test_x = torch.from_numpy(test_x)
+    # test_x_LR = torch.from_numpy(test_x_LR)
     test_y = torch.from_numpy(test_y)
     test_y_LR = torch.from_numpy(test_y_LR)
 
@@ -141,7 +143,7 @@ for future in [1]:
     # print('sample test_x:',test_x[0,u,:,2:3].view(30,8),'sample test_x_LR:',test_x_LR[0,u,:,2:3].view(30,8))
     # import pdb;pdb.set_trace()
     # clear memory
-    del test_x,test_y,test_y_LR,train_x,train_y,val_x,val_y
+    # del test_x,test_y,test_y_LR,train_x,train_y,val_x,val_y
 
 
 

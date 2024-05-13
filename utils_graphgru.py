@@ -6,7 +6,7 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+    def __init__(self, patience=7, verbose=False, delta=0, val_loss_min =float('inf'), path='checkpoint.pt', trace_func=print):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -23,9 +23,12 @@ class EarlyStopping:
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
-        self.best_score = None
+        if val_loss_min == float('inf'):
+            self.best_score = None
+        else:
+            self.best_score = -val_loss_min
         self.early_stop = False
-        self.val_loss_min = float('inf')
+        self.val_loss_min = val_loss_min
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
