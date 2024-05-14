@@ -7,7 +7,7 @@
 #SBATCH --mem=64GB	
 #SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/slurm90_60_G2_full_lre4_dim128_%j.out
+#SBATCH --output=./log/slurm90_30_G1_full_lre4_dim100_%j.out
 
 module purge
 

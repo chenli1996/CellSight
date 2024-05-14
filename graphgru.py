@@ -421,10 +421,12 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
 
 
 def main():
-    test_flag = True
+    with_train = True
+    continue_train = False
+    last_val_loss = 0.0025
     voxel_size = int(128)
     num_nodes = 240
-    history,future=90,150
+    history,future=90,1
     # history,future=10,1
     p_start = 1
     p_end = 28
@@ -438,7 +440,7 @@ def main():
     # batch_size=25 #G2 T h2
     batch_size=128 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'G1_h1_lre43_90_150_fulledge_{hidden_dim}'
+    model_prefix = f'G1_h1_lre42_90_1_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
 
@@ -484,81 +486,84 @@ def main():
     if torch.cuda.is_available():
         mymodel=mymodel.cuda()
     # print(mymodel)
-    
-    learning_rate=0.0003
-    # learning_rate = 0.0001
-    criterion = torch.nn.MSELoss()    # mean-squared error for regression
-    # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
-    optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
-    # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
-    lossa=[]
-    val_loss_list = []
+    if with_train:
 
-    # Initialize the early stopping object
-    # early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=0.009612, path=best_checkpoint_model_path) #continue training the best check point
-    early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
+        learning_rate=0.0003
+        # learning_rate = 0.0001
+        criterion = torch.nn.MSELoss()    # mean-squared error for regression
+        # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
+        optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
+        # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
+        lossa=[]
+        val_loss_list = []
 
-    for epochs in range(1,num_epochs+1):
-        mymodel.train()
-        iter1 = 0
-        iter2 = 0
-        loss_total=0
-        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
-            # with record_function("model_training"):
-        for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
-            if torch.cuda.is_available():
-                batch_x=batch_x.cuda()
-                batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-            # import pdb;pdb.set_trace()
-            outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-            optimizer.zero_grad()
-            # break
+        # Initialize the early stopping object
+        if continue_train:
+            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
+        else:
+            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
 
-            # only get loss on the node who has points, in other words, the node whose occupancy is not 0
-            # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
-            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
-            loss = criterion(outputs,batch_y)
-            loss_total=loss_total+loss.item()
-            #backpropagation
-            loss.backward()
-            optimizer.step()
-            iter1+=1
-            # print loss
-            if i % 10 == 0:
-                print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
-        # Print profiler results
-        # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
-        # break                          
-            
-        loss_avg = loss_total/iter1
-        losss=loss_avg
-        lossa.append(losss)
-        print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg),flush=True)
-        # save model every 10 epochs and then reload it to continue training
-        if epochs % 10 == 0:
-            #save and reload
-            torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
-            print('model saved')
-        val_loss = get_val_loss(mymodel,val_loader,criterion)
-        val_loss_list.append(val_loss)
-        print("val_loss:%1.5f" % (val_loss))
-        # Call early stopping
-        early_stopping(val_loss, mymodel)
-        if early_stopping.early_stop:
-            print("Early stopping")
-            break
+        for epochs in range(1,num_epochs+1):
+            mymodel.train()
+            iter1 = 0
+            iter2 = 0
+            loss_total=0
+            # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
+                # with record_function("model_training"):
+            for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
+                if torch.cuda.is_available():
+                    batch_x=batch_x.cuda()
+                    batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+                # import pdb;pdb.set_trace()
+                outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+                optimizer.zero_grad()
+                # break
 
-    np.save(f'./data/output/graphgru_{model_prefix}_training_loss{history}_{future}',lossa)
-    np.save(f'./data/output/graphgru_{model_prefix}_val_loss{history}_{future}',val_loss_list)
-    print('loss saved')
-    # plot training and val loss and save to file
-    plt.figure()
-    plt.plot(lossa)
-    plt.plot(val_loss_list)
-    plt.legend(['Training Loss', 'Validation Loss'])
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.savefig(f'./data/fig/graphgru_{model_prefix}_trainingloss{history}_{future}.png')
+                # only get loss on the node who has points, in other words, the node whose occupancy is not 0
+                # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
+                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+                loss = criterion(outputs,batch_y)
+                loss_total=loss_total+loss.item()
+                #backpropagation
+                loss.backward()
+                optimizer.step()
+                iter1+=1
+                # print loss
+                if i % 10 == 0:
+                    print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
+            # Print profiler results
+            # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
+            # break                          
+                
+            loss_avg = loss_total/iter1
+            losss=loss_avg
+            lossa.append(losss)
+            print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg),flush=True)
+            # save model every 10 epochs and then reload it to continue training
+            if epochs % 10 == 0:
+                #save and reload
+                torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
+                print('model saved')
+            val_loss = get_val_loss(mymodel,val_loader,criterion)
+            val_loss_list.append(val_loss)
+            print("val_loss:%1.5f" % (val_loss))
+            # Call early stopping
+            early_stopping(val_loss, mymodel)
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
+
+        np.save(f'./data/output/graphgru_{model_prefix}_training_loss{history}_{future}',lossa)
+        np.save(f'./data/output/graphgru_{model_prefix}_val_loss{history}_{future}',val_loss_list)
+        print('loss saved')
+        # plot training and val loss and save to file
+        plt.figure()
+        plt.plot(lossa)
+        plt.plot(val_loss_list)
+        plt.legend(['Training Loss', 'Validation Loss'])
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.savefig(f'./data/fig/graphgru_{model_prefix}_trainingloss{history}_{future}.png')
 
     # mae = MeanAbsoluteError().cuda()
     # mape=MeanAbsolutePercentageError().cuda()
@@ -615,7 +620,7 @@ if __name__ == '__main__':
     main()
     
     
-    # future = 60
+    # future = 10
     # history = 90
     # output_size = 1
     # num_nodes = 240
