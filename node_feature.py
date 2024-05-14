@@ -79,83 +79,88 @@ def generate_node_feature():
     original_index_to_integer_index = results['original_index_to_integer_index']
     # for pcd_name in ['longdress','loot','redandblack']:
     for pcd_name in ['soldier']:
-        history = 30
-        future = 1
-        prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
-        for user_i in tqdm(range(1,15)):  # LR is 15 for testing***********************************************
-            participant = 'P'+str(user_i).zfill(2)+'_V1'
-            node_index = []
-            occupancy_feature = []
-            in_FoV_feature = []
-            occlusion_feature = []
-            distance_feature = []
-            coordinate_feature = []
-            # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
-            positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future)
-            for trajectory_index in tqdm(range((len(positions)))):
-                # print(f'Processing trajectory {trajectory_index}...')
-                # Load the point cloud data
-                pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index%150)
-                # get the position and orientation for the given participant and trajectory index
-                
-                position = positions[trajectory_index]
-                orientation = orientations[trajectory_index]
-                para_eye = [i*1024/1.8 for i in position]
-                para_eye[2] = -para_eye[2]
-                # para_eye = np.array(para_eye).reshape(3,1)
-                pitch_degree, yaw_degree, roll_degree = orientation
-                
-                # Define camera intrinsic parameters
-                intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
-                # Define camera extrinsic parameters
-                extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
+        history = 90
+        # future = 60
+        # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
+        prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
+        for future in [90,150,1,10,30]:
+            print(f'Processing {pcd_name} with history {history} and future {future}...')
+            for user_i in tqdm(range(1,15)):  # TLP/LR is 15 for testing***********************************************
+                participant = 'P'+str(user_i).zfill(2)+'_V1'
+                node_index = []
+                occupancy_feature = []
+                in_FoV_feature = []
+                occlusion_feature = []
+                distance_feature = []
+                coordinate_feature = []
+                # choose different trajectory files***********************************************
+                # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
+                # positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future) # LR is _LR for testing***********************************************
+                positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
+                for trajectory_index in tqdm(range((len(positions)))):
+                    # print(f'Processing trajectory {trajectory_index}...')
+                    # Load the point cloud data
+                    pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index%150)
+                    # get the position and orientation for the given participant and trajectory index
+                    
+                    position = positions[trajectory_index]
+                    orientation = orientations[trajectory_index]
+                    para_eye = [i*1024/1.8 for i in position]
+                    para_eye[2] = -para_eye[2]
+                    # para_eye = np.array(para_eye).reshape(3,1)
+                    pitch_degree, yaw_degree, roll_degree = orientation
+                    
+                    # Define camera intrinsic parameters
+                    intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
+                    # Define camera extrinsic parameters
+                    extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
 
 
 
-                # pcd = pcd.voxel_down_sample(voxel_size=8)
-                # get the occupancy feature
-                occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
-                # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
-                
+                    # pcd = pcd.voxel_down_sample(voxel_size=8)
+                    # get the occupancy feature
+                    occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
+                    # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
+                    
 
-                # get the in_FoV_voxel_percentage_dict
-                in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                # print('in_FoV_dict:         ',in_FoV_percentage_dict[(1, 5, 2)])
+                    # get the in_FoV_voxel_percentage_dict
+                    in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                    # print('in_FoV_dict:         ',in_FoV_percentage_dict[(1, 5, 2)])
 
-                # get occlusion level
-                # deep copy the pcd
-                
-                occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
-                # print('occupancy_dict:      ',occupancy_dict)
-                # print('occupancy_array:      ',occupancy_array)
-                # print('occlusion_level_dict:',occlusion_level_dict)
-                # print('occulusion_array:    ',occulusion_array)
-                # print('in_FoV_dict:         ',in_FoV_percentage_dict)
-                # print('in_FoV_array:        ',in_FoV_voxel_percentage_array)
-                # visualize the voxel grid
-                # visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,para_eye,graph_voxel_grid_integer_index_set,graph_voxel_grid_coords)
-                # append features
-                occupancy_feature.append(occupancy_array)
-                in_FoV_feature.append(in_FoV_voxel_percentage_array)
-                occlusion_feature.append(occulusion_array)
-                node_index.append(graph_voxel_grid_integer_index_set)
-                coordinate_feature.append(graph_voxel_grid_coords_array)
-                distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
-            # save the features to the csv file
-            occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
-            in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)
-            occlusion_feature = np.array(occlusion_feature).reshape(-1,1)
-            node_index = np.array(node_index).reshape(-1,1)
-            coordinate_feature = np.array(coordinate_feature).reshape(-1,3)
-            distance_feature = np.array(distance_feature).reshape(-1,1)
-            # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
-            node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,coordinate_feature,distance_feature,node_index),axis=1)
-            node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
-            if not os.path.exists(f'./data/{prefix}'):
-                os.makedirs(f'./data/{prefix}')
-            # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
-            node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
+                    # get occlusion level
+                    # deep copy the pcd
+                    
+                    occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                    # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
+                    # print('occupancy_dict:      ',occupancy_dict)
+                    # print('occupancy_array:      ',occupancy_array)
+                    # print('occlusion_level_dict:',occlusion_level_dict)
+                    # print('occulusion_array:    ',occulusion_array)
+                    # print('in_FoV_dict:         ',in_FoV_percentage_dict)
+                    # print('in_FoV_array:        ',in_FoV_voxel_percentage_array)
+                    # visualize the voxel grid
+                    # visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,para_eye,graph_voxel_grid_integer_index_set,graph_voxel_grid_coords)
+                    # append features
+                    occupancy_feature.append(occupancy_array)
+                    in_FoV_feature.append(in_FoV_voxel_percentage_array)
+                    occlusion_feature.append(occulusion_array)
+                    node_index.append(graph_voxel_grid_integer_index_set)
+                    coordinate_feature.append(graph_voxel_grid_coords_array)
+                    distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
+                # save the features to the csv file
+                occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
+                in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)
+                occlusion_feature = np.array(occlusion_feature).reshape(-1,1)
+                node_index = np.array(node_index).reshape(-1,1)
+                coordinate_feature = np.array(coordinate_feature).reshape(-1,3)
+                distance_feature = np.array(distance_feature).reshape(-1,1)
+                # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
+                node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,coordinate_feature,distance_feature,node_index),axis=1)
+                node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
+                if not os.path.exists(f'./data/{prefix}'):
+                    os.makedirs(f'./data/{prefix}')
+                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+                node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
 
 
 
