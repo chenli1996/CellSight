@@ -179,14 +179,14 @@ num_nodes = 240
 # history=90
 # for future in [1,10,30,60]:
 history = 90
+# for future in [1,10,30,60,150]:
 for future in [60]:
+    print(f'history:{history},future:{future}')
     p_start = 1
     p_end = 28
     output_size = 1
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-    # print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
-    #         'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
-    #         'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
+
     del train_x,train_y,val_x,val_y,test_x
     # test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     # del test_x_LR
@@ -216,11 +216,19 @@ for future in [60]:
     MAE_list = []
     MSE_list = []
     u=future-1
-    # MAE_d = mae(test_y[:,u,:,2:3],test_y_LR[:,u,:,2:3]).cpu().detach().numpy()
-    # MSE_d = mse(test_y[:, u, :, 2:3].contiguous(), test_y_LR[:, u, :, 2:3].contiguous()).cpu().detach().numpy()
     MAE_d = mae(test_y[:,u,:,2:3],test_y_TLR[:,u,:,2:3]).cpu().detach().numpy()
     MSE_d = mse(test_y[:, u, :, 2:3].contiguous(), test_y_TLR[:, u, :, 2:3].contiguous()).cpu().detach().numpy()    
     print(f'MAE:{MAE_d},MSE:{MSE_d},history:{history},future:{future}')
+    # get the var of test_y[:,u,:,2:3] after masking off all zeros
+    test_y = test_y.cpu().detach().numpy()
+    test_y = test_y[:,u,:,2:3]
+    mask = test_y != 0
+    # test_y = test_y[mask]
+    var = np.var(test_y)
+    print(f'var:{var},history:{history},future:{future}')
+
+
+    del test_y,test_y_TLR
 
 
 

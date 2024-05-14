@@ -248,7 +248,12 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
         test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
         val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
-        
+        train_x = train_x.astype(np.float32)
+        train_y = train_y.astype(np.float32)
+        test_x = test_x.astype(np.float32)
+        test_y = test_y.astype(np.float32)
+        val_x = val_x.astype(np.float32)
+        val_y = val_y.astype(np.float32)
         # save data to file with prefix is all_videos
         np.save(f'./data/data/all_videos_train_x{history}_{future}.npy',train_x)
         np.save(f'./data/data/all_videos_train_y{history}_{future}.npy',train_y)
