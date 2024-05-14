@@ -291,9 +291,9 @@ def truncated_linear_regression_baseline():
     file_name = f'{data_index}_nav.csv'
     pred_file_path = "../point_cloud_data/TLR_pred/"
 
-    for future_steps in [1,30,60,90,150]:
+    # for future_steps in [1,30,60,90,150]:
     # for future_steps in [1,10,30,60]:
-    # for future_steps in [1]:
+    for future_steps in [10]:
         pred_file_name = f"{data_index}_nav_tlpred"+str(window_size_lr)+str(future_steps)+".csv"  
         diff_file_name = f"{data_index}_nav_tldiff"+str(window_size_lr)+str(future_steps)+".csv"
         gt_file_name = f"{data_index}_nav_gt.csv"
