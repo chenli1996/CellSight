@@ -43,7 +43,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
                 x=np.array(norm_data)
                 feature_num = len(column_name)
                 # feature_num = 1
-                print('feature_num:',feature_num)
+                # print('feature_num:',feature_num)
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
@@ -121,7 +121,7 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
                 x=np.array(norm_data)
                 feature_num = len(column_name)
                 # feature_num = 1
-                print('feature_num:',feature_num)
+                # print('feature_num:',feature_num)
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
@@ -179,8 +179,8 @@ num_nodes = 240
 # history=90
 # for future in [1,10,30,60]:
 history = 90
-# for future in [1,10,30,60,150]:
-for future in [60]:
+# for future in [10,30,150]:
+for future in [1,10,30,60]:
     print(f'history:{history},future:{future}')
     p_start = 1
     p_end = 28
@@ -223,8 +223,12 @@ for future in [60]:
     test_y = test_y.cpu().detach().numpy()
     test_y = test_y[:,u,:,2:3]
     mask = test_y != 0
-    # test_y = test_y[mask]
+    test_y = test_y[mask]
     var = np.var(test_y)
+    # get the distrubution result of test_y
+    # plt.hist(test_y.ravel(),bins=100)
+    # plt.savefig(f'./data/fig/test_y_{history}_{future}_per.png')
+
     print(f'var:{var},history:{history},future:{future}')
 
 

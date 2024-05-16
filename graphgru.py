@@ -101,14 +101,14 @@ class GraphGRUCell(nn.Module):
         self.OriginalGAT = True
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
         if self.OriginalGAT:
-            self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=True)
-            self.GCN4 = GATConv(self.num_units*self.head,self.num_units,concat=False)
+            self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
+            self.GCN4 = GATConv(self.num_units,self.num_units,concat=False)
         else:
             # self.GAT3 = GATv2Conv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
             # self.GAT4 = GATv2Conv(self.num_units*self.head,self.num_units,concat=False)
 
-            self.GAT3 = TransformerConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=True)
-            self.GAT4 = TransformerConv(self.num_units*self.head,self.num_units,concat=False)
+            self.GAT3 = TransformerConv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
+            self.GAT4 = TransformerConv(self.num_units,self.num_units,concat=False)
 
 
     def init_params(self, bias_start=0.0):
@@ -327,6 +327,7 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
             batch_y=batch_y.cuda()
             outputs = net(batch_x)
             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+            # batch_y = batch_y[:,:,:,2:3]
             for u in range(future):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
@@ -334,6 +335,14 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
                 # import pdb;pdb.set_trace()
+                if u==149:
+                    for sample in range(0,batch_x.shape[0],100):
+                        print('sample:',sample)
+                        # print('output:',outputs[sample,u,:].view(30,8))
+                        # print('label:',batch_y[sample,u,:].view(30,8))
+                        print('output:',outputs[sample,u,134])
+                        print('label:',batch_y[sample,u,134])
+                        # import pdb;pdb.set_trace()
                 mse_list.append(MSE_d.item())
                 mae_list.append(MAE_d.item())
                 mape_list.append(MAPE_d.item())
@@ -348,34 +357,79 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
         plt.legend(['MSE', 'MAE'])
         plt.xlabel('Prediction Horizon/frame')
         plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/graphgru_{model_prefix}_testingloss{history}_{future}.png') 
+        plt.savefig(f'./data/fig/nm_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
+def eval_model_sample(mymodel,test_loader,model_prefix,history=90,future=60):
+    mae = MeanAbsoluteError().cuda()
+    mape=MeanAbsolutePercentageError().cuda()
+    mse=MeanSquaredError().cuda()
+    net = mymodel.eval().cuda()
+    mse_list = []
+    mae_list = []
+    mape_list = []
+    with torch.no_grad():
+        for i,(batch_x, batch_y) in enumerate (test_loader):
+            assert i == 0 # batch size is equal to the test set size
+            batch_x=batch_x.cuda()
+            batch_y=batch_y.cuda()
+            outputs = net(batch_x)
+            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+            # for sample in range(0,batch_x.shape[0],100):
+            # batch_y = batch_y[:,:,:,2:3]
+            for u in range(future):
+                MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+                print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
+                # import pdb;pdb.set_trace()
+                # if u==149:
+                #     for sample in range(0,batch_x.shape[0],100):
+                #         print('sample:',sample)
+                #         # print('output:',outputs[sample,u,:].view(30,8))
+                #         # print('label:',batch_y[sample,u,:].view(30,8))
+                #         print('output:',outputs[sample,u,134])
+                #         print('label:',batch_y[sample,u,134])
+                #         # import pdb;pdb.set_trace()
+                mse_list.append(MSE_d.item())
+                mae_list.append(MAE_d.item())
+                mape_list.append(MAPE_d.item())
+        print('MSE:',mse_list)
+        print('MAE:',mae_list)
+        # print('MAPE:',mape_list)
+        # plot mse and mae
+        plt.figure()
+        plt.plot(mse_list)
+        plt.plot(mae_list)
+        # plt.plot(mape_list)
+        plt.legend(['MSE', 'MAE'])
+        plt.xlabel('Prediction Horizon/frame')
+        plt.ylabel('Loss')
+        plt.savefig(f'./data/fig/nm_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
 def main():
-    with_train = True
+    with_train = True 
     continue_train = False
     last_val_loss = 0.0025
     voxel_size = int(128)
     num_nodes = 240
-    history,future=90,60
-    # history,future=10,1
+    history,future=60,60
+    # history,future=10,10
     p_start = 1
     p_end = 28
     # p_end = 4
     output_size = 1
-    num_epochs=30
-    # batch_size=32*16 # 30
-    # batch_size=32*4*2 #90 79GB
+    num_epochs=20
+    batch_size=64
+    # batch_size=32 #G1 90
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
     # batch_size=25 #G2 T h2
-    batch_size=128 #T1 h1 fulledge
+    # batch_size=32 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'G1_h1_lre42_90_1_fulledge_{hidden_dim}'
+    model_prefix = f'cutloop150_num_G1_h1_lre42_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-
-
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
@@ -389,7 +443,6 @@ def main():
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     val_dataset=torch.utils.data.TensorDataset(val_x,val_y)
-    # import pdb;pdb.set_trace()
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                             batch_size=batch_size,
@@ -419,9 +472,8 @@ def main():
         mymodel=mymodel.cuda()
     # print(mymodel)
     if with_train:
-
-        learning_rate=0.0003
-        # learning_rate = 0.0001
+        # learning_rate=0.0003
+        learning_rate = 0.0003
         criterion = torch.nn.MSELoss()    # mean-squared error for regression
         # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -434,6 +486,8 @@ def main():
             early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
         else:
             early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
+        # learning rate scheduler 
+        scheduler = ReduceLROnPlateau(optimizer, 'min', patience=1, factor=0.1, min_lr=1e-6)
 
         for epochs in range(1,num_epochs+1):
             mymodel.train()
@@ -446,7 +500,6 @@ def main():
                 if torch.cuda.is_available():
                     batch_x=batch_x.cuda()
                     batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-                # import pdb;pdb.set_trace()
                 outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
                 optimizer.zero_grad()
                 # break
@@ -473,12 +526,17 @@ def main():
             print("epoch:%d,  loss: %1.5f" % (epochs, loss_avg),flush=True)
             # save model every 10 epochs and then reload it to continue training
             if epochs % 10 == 0:
-                #save and reload
+                #save and reloasd
                 torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
                 print('model saved')
             val_loss = get_val_loss(mymodel,val_loader,criterion)
             val_loss_list.append(val_loss)
             print("val_loss:%1.5f" % (val_loss))
+            # Step the scheduler with the validation loss
+            scheduler.step(val_loss)  
+            # Log the last learning rate
+            current_lr = optimizer.param_groups[0]['lr']
+            print(f'Current learning rate: {current_lr}')    
             # Call early stopping
             early_stopping(val_loss, mymodel)
             if early_stopping.early_stop:
@@ -502,7 +560,8 @@ def main():
 
 
     with torch.no_grad():
-        eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
+        eval_model_sample(mymodel,test_loader,model_prefix,history=history,future=future)
+        # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
     main()

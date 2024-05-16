@@ -5,6 +5,8 @@ import torch
 import pickle
 from tqdm import tqdm
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0, val_loss_min =float('inf'), path='checkpoint.pt', trace_func=print):
         """
@@ -136,12 +138,12 @@ def getdata_normalize(file_name,data_type):
     x_list = []
     for feature in data_type:
         x_2 = df[feature].to_numpy()
+        # normalize the data with 60 percentile max and clip outliers to 1
+        # if feature == 'occlusion_feature':
+        #     import pdb;pdb.set_trace()
+        #     x_2 = np.clip(x_2,0,np.percentile(x_2,60))
+            
         x_list.append((x_2 - min(x_2)) / (max(x_2) - min(x_2)))
-        # x_list.append(x_2)
-
-
-    #x_3= df[data_type[2]].to_numpy()
-    # return x_n,x_2
     return x_list
 
 def rmse(predictions, targets):
@@ -175,7 +177,29 @@ def get_history_future_data(data,history,future):
     data_y = []
     if data.shape[0] <= future + history:
         return data_x,data_y
+    i = 0
+    while i < len(data)-history-future:
+        data_x.append(data[i:i+history])
+        data_y.append(data[i+history:i+history+future])
+        if (i+history+future) % 150 == 0:
+            i += 150
+        else:
+            i += 1
+    data_x=np.array(data_x)
+    data_y=np.array(data_y)
+    # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
+    # data_y = data_y[:,:,:,2:3]#only occlusion feature
+
+    return data_x,data_y
+
+def get_history_future_data_full(data,history,future):
+    data_x = []
+    data_y = []
+    if data.shape[0] <= future + history:
+        return data_x,data_y
     for i in range(len(data)-history-future):
+       if i+history+future % 150 == 0:
+           i += 150
        data_x.append(data[i:i+history])
        data_y.append(data[i+history:i+history+future])
     data_x=np.array(data_x)
@@ -185,7 +209,6 @@ def get_history_future_data(data,history,future):
 
     return data_x,data_y
 
-
 def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # train_start = 1
@@ -194,6 +217,15 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     # test_end = 26 -3
     # val_start = 27
     # val_end = 28
+    train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    # initialize as np array
+    train_x = np.array(train_x)
+    train_y = np.array(train_y)
+    test_x = np.array(test_x)
+    test_y = np.array(test_y)
+    val_x = np.array(val_x)
+    val_y = np.array(val_y)
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # column_name ['occlusion_feature']
@@ -209,17 +241,19 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
                 # generate graph voxel grid features
                 prefix = f'{pcd_name}_VS{voxel_size}'
                 node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
-                norm_data=getdata_normalize(node_feature_path,column_name)
-                x=np.array(norm_data)
+                # norm_data=getdata_normalize(node_feature_path,column_name)
+                # read the data from csv file as numpy array
+                x = pd.read_csv(node_feature_path).to_numpy()
+                # x=np.array(x)
                 feature_num = len(column_name)
                 # feature_num = 1
-                print('feature_num:',feature_num)
+                # print('feature_num:',feature_num)
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
                 train_x1,train_y1=get_history_future_data(x,history,future)
                 if len(train_x1) == 0:
-                    print(f'no enough data{participant}')
+                    print(f'no enough data{participant}',flush=True)
                     continue
                 train_x.append(train_x1)
                 train_y.append(train_y1)
@@ -242,7 +276,14 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}.npy')
         test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}.npy')
         val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}.npy')
-        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}.npy')        
+        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}.npy') 
+        # train_x = np.load(f'./data/data_per/all_videos_train_x{history}_{future}.npy')
+        # train_y = np.load(f'./data/data_per/all_videos_train_y{history}_{future}.npy')
+        # test_x = np.load(f'./data/data_per/all_videos_test_x{history}_{future}.npy')
+        # test_y = np.load(f'./data/data_per/all_videos_test_y{history}_{future}.npy')
+        # val_x = np.load(f'./data/data_per/all_videos_val_x{history}_{future}.npy')
+        # val_y = np.load(f'./data/data_per/all_videos_val_y{history}_{future}.npy')
+
     else:
         print('generate data from files')
         train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
@@ -262,6 +303,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         np.save(f'./data/data/all_videos_val_x{history}_{future}.npy',val_x)
         np.save(f'./data/data/all_videos_val_y{history}_{future}.npy',val_y)
         print('data saved')
+    
     train_x = train_x.astype(np.float32)
     train_y = train_y.astype(np.float32)
     test_x = test_x.astype(np.float32)
@@ -269,6 +311,8 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     val_x = val_x.astype(np.float32)
     val_y = val_y.astype(np.float32)
     return train_x,train_y,test_x,test_y,val_x,val_y
+
+
 
 # # participant = 'P01_V1'
 # def get_train_test_split_user():
