@@ -1,8 +1,8 @@
 import cProfile
 import pstats
-# from node_feature import *
+from node_feature import *
 from time import time
-from graphgru import *
+# from graphgru import *
 
 # def main():
 #     # your code here
@@ -15,8 +15,8 @@ if __name__ == "__main__":
     profiler.enable()
     # main()
     # start_time = time()
-    # generate_node_feature()
-    main()
+    generate_node_feature()
+    # main()
     # print(f"Time elapsed: {time() - start_time}")
     profiler.disable()
     stats = pstats.Stats(profiler).sort_stats('cumulative')

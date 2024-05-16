@@ -41,19 +41,22 @@ def get_number_of_points_in_voxel_grid(pcd, voxel_size,min_bounds,max_bounds):
     # print('y_num:',y_num)
     # print('z_num:',z_num)
     # Find unique indices and count the occurrences
-    unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
-    # faster way
-    # Convert numpy array to pandas DataFrame
-    # df = pd.DataFrame(voxel_indices)
+    # unique_indices, counts = np.unique(voxel_indices, axis=0, return_counts=True)
 
-    # # Get unique rows and counts
-    # unique_df = df.drop_duplicates()
-    # counts = df.value_counts().sort_index().values
 
-    # # Converting back to numpy arrays
-    # unique_indices = unique_df.to_numpy()
-    # counts are already a numpy array from the value_counts method
-    # Combine indices and counts into a dictionary for easier access if needed
+    # faster way on large dataset
+    # # Convert the array to a DataFrame
+    df = pd.DataFrame(voxel_indices)
+    # Find unique rows and their counts
+    # import pdb; pdb.set_trace()
+    unique_df = df.groupby(df.columns.tolist()).size().reset_index(name='counts')
+    # Extract unique_indices and counts
+    unique_indices = unique_df[df.columns.tolist()].values
+    counts = unique_df['counts'].values
+    # assert unique_indices_new.all()==unique_indices.all()
+    # assert counts_new.all()==counts.all()
+
+
     point_counts_in_voxel = {tuple(index): count for index, count in zip(unique_indices, counts)}
     # using a single integer index to represent the voxel index
     point_counts_in_voxel_integer = {index[0]*y_num*z_num + index[1]*z_num + index[2]: count for index, count in zip(unique_indices, counts)}
@@ -232,7 +235,7 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
 
 def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
     # pcd = pcd.voxel_down_sample(voxel_size=8)
-    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
+    # point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     # get the points in the FoV
     pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
     # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=4)
@@ -242,10 +245,11 @@ def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_
     occlusion_array = []
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel_hpr:
-            occlusion_level_dict[voxel_index] = point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index]
-            occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
-            if occlusion_array[-1] > 1:
-                print('occlusion_array:',occlusion_array[-1],voxel_index)
+            occlusion_level_dict[voxel_index] = point_counts_in_voxel_hpr[voxel_index]
+            # occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
+            occlusion_array.append(point_counts_in_voxel_hpr[voxel_index])# get the number of points in the voxel
+            # if occlusion_array[-1] > 1: # this is only for ratio
+                # print('occlusion_array:',occlusion_array[-1],voxel_index)
                 # print('point_counts_in_voxel_hpr:',point_counts_in_voxel_hpr[voxel_index])
                 # print('point_counts_in_voxel:',point_counts_in_voxel[voxel_index])
                 # import pdb; pdb.set_trace()
