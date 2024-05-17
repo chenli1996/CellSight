@@ -60,7 +60,7 @@ def generate_node_feature():
     # trajectory_index = 0
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
-    voxel_size = int(128/2)
+    voxel_size = int(32)
     min_bounds = np.array([-251,    0, -241]) 
     max_bounds = np.array([ 262, 1023,  511])
     
@@ -77,8 +77,8 @@ def generate_node_feature():
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
-    for pcd_name in ['longdress','loot','redandblack','soldier']:
-    # for pcd_name in ['soldier']:
+    # for pcd_name in ['longdress','loot','redandblack','soldier']:
+    for pcd_name in ['soldier']:
         history = 90
         # future = 60
         # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
