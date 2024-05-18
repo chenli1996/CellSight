@@ -140,10 +140,12 @@ def getdata_normalize(file_name,data_type):
         x_2 = df[feature].to_numpy()
         # normalize the data with 60 percentile max and clip outliers to 1
         # if feature == 'occlusion_feature':
-        #     import pdb;pdb.set_trace()
-        #     x_2 = np.clip(x_2,0,np.percentile(x_2,60))
-            
+            # import pdb;pdb.set_trace()
+            # x_2 = np.clip(x_2,0,600)
+            # print('occlusion_feature clipped to 600')
         x_list.append((x_2 - min(x_2)) / (max(x_2) - min(x_2)))
+        # x_list.append(x_2/800)
+    # import pdb;pdb.set_trace()
     return x_list
 
 def rmse(predictions, targets):
@@ -198,8 +200,6 @@ def get_history_future_data_full(data,history,future):
     if data.shape[0] <= future + history:
         return data_x,data_y
     for i in range(len(data)-history-future):
-       if i+history+future % 150 == 0:
-           i += 150
        data_x.append(data[i:i+history])
        data_y.append(data[i+history:i+history+future])
     data_x=np.array(data_x)
@@ -241,9 +241,13 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
                 # generate graph voxel grid features
                 prefix = f'{pcd_name}_VS{voxel_size}'
                 node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
-                # norm_data=getdata_normalize(node_feature_path,column_name)
+                norm_data=getdata_normalize(node_feature_path,column_name)
+                x=np.array(norm_data)
                 # read the data from csv file as numpy array
-                x = pd.read_csv(node_feature_path).to_numpy()
+                # x = pd.read_csv(node_feature_path)
+                # if only get occlusion_feature from column_name[2:7] list
+                # x = x[column_name].to_numpy()
+                # import pdb;pdb.set_trace()
                 # x=np.array(x)
                 feature_num = len(column_name)
                 # feature_num = 1
@@ -251,7 +255,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
-                train_x1,train_y1=get_history_future_data(x,history,future)
+                train_x1,train_y1=get_history_future_data_full(x,history,future)
                 if len(train_x1) == 0:
                     print(f'no enough data{participant}',flush=True)
                     continue
@@ -267,16 +271,17 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         train_y = np.concatenate(train_y)
         return train_x,train_y
     # if data is saved, load it
-    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}.npy'):
+    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
-        train_x = np.load(f'./data/data/all_videos_train_x{history}_{future}.npy')
-        train_y = np.load(f'./data/data/all_videos_train_y{history}_{future}.npy')
-        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}.npy')
-        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}.npy')
-        val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}.npy')
-        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}.npy') 
+        train_x = np.load(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy')
+        train_y = np.load(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy')
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy')
+        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy')
+        val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy')
+        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy')
+
         # train_x = np.load(f'./data/data_per/all_videos_train_x{history}_{future}.npy')
         # train_y = np.load(f'./data/data_per/all_videos_train_y{history}_{future}.npy')
         # test_x = np.load(f'./data/data_per/all_videos_test_x{history}_{future}.npy')
@@ -296,12 +301,12 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
         val_x = val_x.astype(np.float32)
         val_y = val_y.astype(np.float32)
         # save data to file with prefix is all_videos
-        np.save(f'./data/data/all_videos_train_x{history}_{future}.npy',train_x)
-        np.save(f'./data/data/all_videos_train_y{history}_{future}.npy',train_y)
-        np.save(f'./data/data/all_videos_test_x{history}_{future}.npy',test_x)
-        np.save(f'./data/data/all_videos_test_y{history}_{future}.npy',test_y)
-        np.save(f'./data/data/all_videos_val_x{history}_{future}.npy',val_x)
-        np.save(f'./data/data/all_videos_val_y{history}_{future}.npy',val_y)
+        np.save(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
+        np.save(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
+        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy',test_x)
+        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy',test_y)
+        np.save(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
+        np.save(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)        
         print('data saved')
     
     train_x = train_x.astype(np.float32)

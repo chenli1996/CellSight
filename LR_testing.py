@@ -47,7 +47,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
-                train_x1,train_y1=get_history_future_data(x,history,future)
+                train_x1,train_y1=get_history_future_data_full(x,history,future)
                 if len(train_x1) == 0:
                     print(f'no enough data{participant}')
                     continue
@@ -115,7 +115,7 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
             for user_i in tqdm(range(p_start,p_end)):
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 # generate graph voxel grid features
-                prefix = f'{pcd_name}_VS{voxel_size}_TLR'
+                prefix = f'{pcd_name}_VS{voxel_size}_TLR_per'
                 node_feature_path = f'./data/{prefix}/{participant}node_feature{history}{future}.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data)
@@ -125,7 +125,7 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
                 x=x.reshape(feature_num,-1,num_nodes)
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
-                train_x1,train_y1=get_history_future_data(x,history,future)
+                train_x1,train_y1=get_history_future_data_full(x,history,future)
                 if len(train_x1) == 0:
                     print(f'no enough data{participant}')
                     continue
@@ -145,30 +145,19 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
-        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_TLR.npy')
-        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_TLR.npy')
-        # val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}_LR.npy')
-        # val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}_LR.npy')       
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_TLR.npy')
+        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_TLR.npy')
     else:
         print('generate data from files')
         # train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
         test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
         # val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
-        
+        test_x = test_x.astype(np.float32)
+        test_y = test_y.astype(np.float32)
         # save data to file with prefix is all_videos
-        # np.save(f'./data/data/all_videos_train_x{history}_{future}.npy',train_x)
-        # np.save(f'./data/data/all_videos_train_y{history}_{future}.npy',train_y)
-        np.save(f'./data/data/all_videos_test_x{history}_{future}_TLR.npy',test_x)
-        np.save(f'./data/data/all_videos_test_y{history}_{future}_TLR.npy',test_y)
-        # np.save(f'./data/data/all_videos_val_x{history}_{future}.npy',val_x)
-        # np.save(f'./data/data/all_videos_val_y{history}_{future}.npy',val_y)
+        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_TLR.npy',test_x)
+        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_TLR.npy',test_y)
         print('data saved')
-    # train_x = train_x.astype(np.float32)
-    # train_y = train_y.astype(np.float32)
-    test_x = test_x.astype(np.float32)
-    test_y = test_y.astype(np.float32)
-    # val_x = val_x.astype(np.float32)
-    # val_y = val_y.astype(np.float32)
     return test_x,test_y
 
 
@@ -179,8 +168,8 @@ num_nodes = 240
 # history=90
 # for future in [1,10,30,60]:
 history = 90
-# for future in [10,30,150]:
-for future in [1,10,30,60]:
+for future in [60]:
+# for future in [1,10,30,60,150]:
     print(f'history:{history},future:{future}')
     p_start = 1
     p_end = 28
@@ -220,14 +209,15 @@ for future in [1,10,30,60]:
     MSE_d = mse(test_y[:, u, :, 2:3].contiguous(), test_y_TLR[:, u, :, 2:3].contiguous()).cpu().detach().numpy()    
     print(f'MAE:{MAE_d},MSE:{MSE_d},history:{history},future:{future}')
     # get the var of test_y[:,u,:,2:3] after masking off all zeros
+    test_y = test_y_TLR
     test_y = test_y.cpu().detach().numpy()
     test_y = test_y[:,u,:,2:3]
     mask = test_y != 0
     test_y = test_y[mask]
     var = np.var(test_y)
     # get the distrubution result of test_y
-    # plt.hist(test_y.ravel(),bins=100)
-    # plt.savefig(f'./data/fig/test_y_{history}_{future}_per.png')
+    plt.hist(test_y.ravel(),bins=100)
+    plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
 
     print(f'var:{var},history:{history},future:{future}')
 

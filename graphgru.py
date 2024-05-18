@@ -16,6 +16,7 @@ from utils_graphgru import *
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.profiler import profile, record_function, ProfilerActivity
+from sklearn.preprocessing import MinMaxScaler
 
 # torch.autograd.set_detect_anomaly(True)
 
@@ -414,11 +415,11 @@ def main():
     last_val_loss = 0.0025
     voxel_size = int(128)
     num_nodes = 240
-    history,future=60,60
-    # history,future=10,10
+    # history,future=60,60
+    history,future=10,10
     p_start = 1
-    p_end = 28
-    # p_end = 4
+    # p_end = 28
+    p_end = 4
     output_size = 1
     num_epochs=20
     batch_size=64
@@ -428,7 +429,7 @@ def main():
     # batch_size=25 #G2 T h2
     # batch_size=32 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'cutloop150_num_G1_h1_lre42_fulledge_{hidden_dim}'
+    model_prefix = f'testcutloop150_num_G1_h1_lre42_fulledge_{hidden_dim}'
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
@@ -439,6 +440,8 @@ def main():
     test_y = torch.from_numpy(test_y)
     val_x = torch.from_numpy(val_x)
     val_y = torch.from_numpy(val_y)
+    # import pdb;pdb.set_trace()
+    # train_x[:,:,:,]
     
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
