@@ -284,7 +284,7 @@ def linear_regression_baseline():
 
 def truncated_linear_regression_baseline():
     # read ground truth data
-    window_size_lr = 90
+    window_size_lr = 60
     # future_steps =150
     file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     data_index = "H4"
@@ -293,7 +293,7 @@ def truncated_linear_regression_baseline():
 
     # for future_steps in [1,30,60,90,150]:
     # for future_steps in [1,10,30,60]:
-    for future_steps in [10]:
+    for future_steps in [60]:
         pred_file_name = f"{data_index}_nav_tlpred"+str(window_size_lr)+str(future_steps)+".csv"  
         diff_file_name = f"{data_index}_nav_tldiff"+str(window_size_lr)+str(future_steps)+".csv"
         gt_file_name = f"{data_index}_nav_gt.csv"

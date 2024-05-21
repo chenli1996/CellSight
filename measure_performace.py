@@ -1,6 +1,6 @@
 import cProfile
 import pstats
-from node_feature import *
+from point_cloud_FoV_Graph.node_feature_graph import *
 from time import time
 # from graphgru import *
 
