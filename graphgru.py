@@ -1,5 +1,8 @@
 #!/bin/env python
 
+from cgi import test
+from math import e
+from turtle import forward
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
@@ -97,7 +100,7 @@ class GraphGRUCell(nn.Module):
         self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
 
         self.head = 1
-        self.multiGAT = False
+        self.multiGAT = True
         self.dropout = 0.2
         self.OriginalGAT = True
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
@@ -266,10 +269,253 @@ class GraphGRU(nn.Module):
         # -------------------构造模型-----------------------------
         self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.r1, self.r2, self.batch_size, self.device, self.input_dim)
         self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.input_dim)
-        self.fc1 = nn.Linear(self.gru_units*2, 120)
-        #self.output_model = nn.Linear(self.gru_units*2, self.output_window * self.output_dim)
-        self.output_model = nn.Linear(120, self.output_window * self.output_dim)
+        self.GraphGRU_model_o = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.output_dim+1)
+        self.GraphGRU_model_future = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.input_dim)
+        self.fc1 = nn.Linear(self.gru_units*2, self.gru_units)
+        self.output_window = 1
+        self.output_model = nn.Linear(self.gru_units, self.output_window * self.output_dim)
+        # self.combine_O_L_F = nn.Linear(self.output_dim+1, self.output_dim)
+        # MLP layer for combine_O_L_F
+        self.combine_O_L_F = nn.Sequential(
+                    nn.Linear(self.gru_units, self.output_dim*32, bias=True),
+                    nn.ReLU(),
+                    nn.Linear(self.output_dim*32, self.output_dim*32, bias=True),
+                    nn.ReLU(),
+                    nn.Linear(self.output_dim*32, self.output_dim, bias=True),
+                    nn.ReLU()
+                )
+
+        self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
+
+        self.head = 1
+        self.multiGAT = False
+        self.dropout = 0.2
+        self.OriginalGAT = False
+        self.num_units = hidden_size
+        # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
+        if self.OriginalGAT:
+            self.GCN3 = GATConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
+            self.GCN4 = GATConv(self.num_units,self.num_units,concat=False)
+        else:
+            # self.GAT3 = GATv2Conv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
+            # self.GAT4 = GATv2Conv(self.num_units*self.head,self.num_units,concat=False)
+
+            self.GAT3 = TransformerConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
+            self.GAT4 = TransformerConv(self.num_units,self.num_units,concat=False)
+        self.afterG = nn.Linear(self.num_units, self.output_dim)
+        self.mylinear = nn.Linear(self.output_dim, self.output_dim)
+        self.batch_norm = nn.BatchNorm1d(self.input_dim)
+
+    def precompute_edge_index(self, batch_size=None):
+        edge_index = torch.tensor(np.stack((np.array(self.r1),np.array(self.r2))), dtype=torch.long).to(self.device)
+        # Ensure edge_index is on the GPU
+        edge_index = edge_index.to(self.device)
+        
+        # Replicate edge_index for each graph in the batch
+        edge_index_expanded = edge_index.repeat(1, batch_size)
+        
+        # Create edge_index_offsets directly on the GPU
+        edge_index_offsets = torch.arange(batch_size, device=self.device).repeat_interleave(edge_index.size(1)) * self.num_nodes
+        
+        # Add the offsets to edge_index_expanded
+        edge_index_expanded += edge_index_offsets
+        
+        return edge_index_expanded   
+
+
+        # self.output_model = nn.Linear(self.gru_units, self.output_window * self.output_dim)
+        # only predict one future frame
+        # self.fc2 = nn.Linear(self.gru_units, self.output_dim) #used to get state for F^ and L^
+        # self.fc2s = nn.ModuleList([nn.Linear(self.gru_units, self.output_dim) for i in range(self.output_window)])
+        # self.fc2_F_Ls = nn.ModuleList([nn.Linear(self.output_dim+1, self.output_dim) for i in range(self.output_window)])
+        # self.fc2_F_L = nn.Linear(self.input_dim-1, self.output_dim) #used to get F^ and L^ using O^x
+        # self.output_model = nn.Linear(self.gru_units, self.output_dim)
+        # I want to have  output_models with the number of self.output_window
+        # self.output_models = nn.ModuleList([nn.Linear(self.gru_units, self.output_dim) for i in range(self.output_window)])
+
+        
+
     def forward(self, x):
+        """
+        Args:
+            batch: a batch of input,
+                batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
+                batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
+
+        Returns:
+            torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
+        """
+        inputs = x
+        # labels = batch['y']
+
+        batch_size, input_window, num_nodes, input_dim = inputs.shape
+        # assert batch_size == 200
+        inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
+
+# ______________________________________________________________________________________________________________________
+        # Reshape x to [input_window * batch_size * num_nodes, input_dim]
+        # x_reshaped = x.permute(1, 2, 0, 3).contiguous().view(-1, input_dim)
+        # # Apply BatchNorm
+        # x_normalized = self.batch_norm(x_reshaped)
+
+        # # Reshape back to the original shape if necessary
+        # x_normalized = x_normalized.view(input_window, batch_size, num_nodes, input_dim).permute(2, 1, 0, 3)
+        # inputs = x_normalized.contiguous()
+
+# ______________________________________________________________________________________________________________________
+
+        
+        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device) # (input_window, batch_size, num_nodes * input_dim)
+        state = torch.zeros(batch_size, self.num_nodes * self.gru_units).to(self.device) # (batch_size, self.num_nodes * self.gru_units)
+        state1 = torch.zeros(batch_size, self.num_nodes * self.gru_units).to(self.device)
+
+        for t in range(input_window):
+              state = self.GraphGRU_model(inputs[t], state) # (batch_size, self.num_nodes * self.gru_units)
+              state1 = self.GraphGRU_model1(inputs[input_window-t-1], state1) # (batch_size, self.num_nodes * self.gru_units)
+
+
+        state = state.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
+        state1 = state1.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
+        #output1 = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+
+        state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
+        # import pdb;pdb.set_trace()
+        state2=self.fc1(state2) # (batch_size, self.num_nodes, self.gru_units)
+        state2 = state2.relu()
+        output2=self.output_model(state2) # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+        # state2 = state2.sigmoid()
+
+        # self.output_window = 1
+        output2 = output2.view(batch_size, self.num_nodes, self.output_window, self.output_dim) # (batch_size, self.num_nodes, self.output_window, self.output_dim)
+        output2 = output2.permute(0, 2, 1, 3) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+
+        # 
+        return output2.sigmoid()
+    
+    def forward_output1_o(self,x,y):
+        # batch normalization
+        inputs = x
+        # labels = batch['y']
+
+        batch_size, input_window, num_nodes, input_dim = inputs.shape
+        # assert batch_size == 200
+        inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
+
+# ______________________________________________________________________________________________________________________
+        # # Reshape x to [input_window * batch_size * num_nodes, input_dim]
+        # x_reshaped = x.permute(1, 2, 0, 3).contiguous().view(-1, input_dim)
+        # # Apply BatchNorm
+        # x_normalized = self.batch_norm(x_reshaped)
+
+        # # Reshape back to the original shape if necessary
+        # x_normalized = x_normalized.view(input_window, batch_size, num_nodes, input_dim).permute(2, 1, 0, 3)
+        # inputs = x_normalized.contiguous()
+
+# ______________________________________________________________________________________________________________________
+
+        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device) # (input_window, batch_size, num_nodes * input_dim)
+
+
+        state = torch.zeros(batch_size, self.num_nodes * self.gru_units).to(self.device) # (batch_size, self.num_nodes * self.gru_units)
+        state1 = torch.zeros(batch_size, self.num_nodes * self.gru_units).to(self.device)
+
+        for t in range(input_window):
+              state = self.GraphGRU_model(inputs[t], state) # (batch_size, self.num_nodes * self.gru_units)
+              state1 = self.GraphGRU_model1(inputs[input_window-t-1], state1) # (batch_size, self.num_nodes * self.gru_units)
+
+
+        state = state.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
+        state1 = state1.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
+        #output1 = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+
+        state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
+        # import pdb;pdb.set_trace()
+        state2=self.fc1(state2) # (batch_size, self.num_nodes, self.gru_units)
+        state2 = state2.relu()
+        output2=self.output_model(state2) # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+        # state2 = state2.sigmoid()
+        self.output_window = 1
+        output2 = output2.view(batch_size, self.num_nodes, self.output_window, self.output_dim) # (batch_size, self.num_nodes, self.output_window, self.output_dim)
+        output2 = output2.permute(0, 2, 1, 3) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+        output2 = output2.sigmoid() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+        y_occupancy = y[:,-30,:,0].unsqueeze(1).unsqueeze(3) # (batch_size, 1, num_nodes, 1) !!!!!!!!!!!!!!!!!!!change to -30 or -1
+        # import pdb;pdb.set_trace()
+
+        
+        # # import pdb;pdb.set_trace()
+        O_L = torch.cat([y_occupancy,output2],dim=3) # (batch_size, 1, num_nodes, output_dim+1)
+        # O_L = y_occupancy + output2
+        # output = self.mylinear(O_L)
+        # output = y_occupancy.sigmoid()
+
+
+
+        state2 = state2.view(batch_size, self.num_nodes, self.gru_units)
+        # output = self.GraphGRU_model_o(O_L, state2)
+        # output = output.view(batch_size, self.num_nodes, self.gru_units)
+        # output = self.combine_O_L_F(output)
+        # output = output.sigmoid()
+        # output.unsqueeze(1)
+
+        # import pdb;pdb.set_trace()
+        O_L = O_L.squeeze(1)
+        x = torch.cat([state2,O_L],dim=2)
+        # import pdb;pdb.set_trace()
+        batch_size, num_nodes, num_features = x.size()
+        x_flat = x.view(-1, num_features)  # Shape: (batch_size * num_nodes, num_features)
+
+        # # Replicate edge_index for each graph in the batch
+        # edge_index_expanded = edge_index.repeat(1, batch_size)
+        # edge_index_offsets = torch.arange(batch_size).repeat_interleave(edge_index.size(1)) * num_nodes
+        # edge_index_expanded += edge_index_offsets.to(self.device)
+
+        # Create a single Data object and then batch it
+        if batch_size == self.batch_size:
+            edge_index = self.edge_index_expanded
+        else:
+            # last batch may have fewer samples
+            edge_index = self.precompute_edge_index(batch_size)
+        data = Data(x=x_flat, edge_index=edge_index)
+        batch = Batch.from_data_list([data])
+        # import pdb;pdb.set_trace()
+        # Pass the batched graph to the model
+        if self.OriginalGAT:
+            if self.multiGAT:
+                x = self.GCN3(batch.x, batch.edge_index)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout)
+                x = self.GCN4(x, batch.edge_index)
+                x = F.relu(x)
+            else:
+                x = self.GCN3(batch.x, batch.edge_index)
+        else:
+            if self.multiGAT:
+                x = self.GAT3(batch.x, batch.edge_index)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout)
+                x = self.GAT4(x, batch.edge_index)
+                x = F.relu(x)
+            else:
+                x = self.GAT3(batch.x, batch.edge_index)
+
+        # biases = self.biases[(output_size,)]
+        # x += biases
+        # x = x.reshape(shape=(batch_size, self.num_nodes* output_size))
+        # import pdb;pdb.set_trace()
+        x = x.reshape(shape=(batch_size, self.num_nodes, self.num_units))
+        x = self.afterG(x)
+        x = x.relu()
+        x = x.view(batch_size, self.num_nodes, self.output_dim)
+        output = x.sigmoid()
+        output = output.unsqueeze(1)
+
+        
+        return output
+        # 
+
+    def forward_object(self, x, y):
+        # y[:,:,:,1:3] = -100
+        # y[:,:,:,6] = -100
         """
         Args:
             batch: a batch of input,
@@ -292,23 +538,76 @@ class GraphGRU(nn.Module):
         for t in range(input_window):
               state = self.GraphGRU_model(inputs[t], state) # (batch_size, self.num_nodes * self.gru_units)
               state1 = self.GraphGRU_model1(inputs[input_window-t-1], state1) # (batch_size, self.num_nodes * self.gru_units)
+            #   here we may need activation function after each state
 
 
         state = state.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
         state1 = state1.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
         #output1 = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window * self.output_dim)
 
-        state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
-        state2=self.fc1(state2) # (batch_size, self.num_nodes, 120)
-        state2 = state2.relu()
-        output2=self.output_model(state2)
-        # state2 = state2.sigmoid()
-        output2 = output2.sigmoid() # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+        # state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
+        state_combined = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
+        state_transformed = self.fc1(state_combined)
+        state_transformed = state_transformed.relu()
+        # import pdb;pdb.set_trace()
+        # state2=self.fc1(state2) # (batch_size, self.num_nodes, self.gru_units)
+        # state2 = state2.relu()
+        # Output initialization
+        outputs = []
+        new_state = state_transformed
+        F_L_state = self.fc2s[0](new_state) # (batch_size, self.num_nodes, self.output_dim)
+        F_L_state = F_L_state.view(batch_size, self.num_nodes, self.output_dim).sigmoid() # (batch_size, self.num_nodes, self.output_dim)
+        # import pdb;pdb.set_trace()
+        # get O,F^,L^:
+        # import pdb;pdb.set_trace()
+        F_L_hat_0_cat_o = torch.cat([y[:,0,:,0].unsqueeze(2), F_L_state], dim=2)
         
-        output2 = output2.view(batch_size, self.num_nodes, self.output_window, self.output_dim)
-        output2 = output2.permute(0, 2, 1, 3)
+        # F_L_hat_0_cat_o.unsqueeze(2)
+        F_L_hat_0 = self.fc2_F_Ls[0](F_L_hat_0_cat_o)
+        F_L_hat_0 = F_L_hat_0.relu()
+        F_L_hat_0 = F_L_hat_0.view(batch_size, self.num_nodes, self.output_dim).sigmoid() # (batch_size, self.num_nodes, self.output_dim)
+        # current_input = F_L_hat_0
+        
+        F_L_hat = F_L_hat_0
+        outputs.append(F_L_hat_0)
+        # Generate predictions using the output of the model as new input
+        for u in range(self.output_window-1):
+            # Assume the output needs to be processed similarly through the GRUs
+            y[:, u, :, 3-self.output_dim:3] = F_L_hat
+            # import pdb;pdb.set_trace()
+            current_input = y[:, u, :, :].view(batch_size, num_nodes * self.input_dim) # (O, F_hat, L_hat) (batch_size, num_nodes * input_dim)
+            new_state = self.GraphGRU_model_future(current_input,new_state)
+            new_state = new_state.view(batch_size, self.num_nodes, self.gru_units)
+            F_L_state = self.fc2s[u+1](new_state) # (batch_size, self.num_nodes, self.output_dim)
+            F_L_state = F_L_state.view(batch_size, self.num_nodes, self.output_dim).sigmoid() # (batch_size, self.num_nodes, self.output_dim)
+            # get O,F^,L^:
+            # import pdb;pdb.set_trace()
+            # y[:, u+1, :, 3-self.output_dim:3] = F_L_state
+            # F_L_hat_cat_o = y[:, u+1, :, 3-self.output_dim:3]
+            F_L_hat_cat_o = torch.cat([y[:,u+1,:,0].unsqueeze(2), F_L_state], dim=2)
+            F_L_hat = self.fc2_F_Ls[u+1](F_L_hat_cat_o)
+            F_L_hat = F_L_hat.relu()
+            F_L_hat = F_L_hat.view(batch_size, self.num_nodes, self.output_dim).sigmoid() # (batch_size, self.num_nodes, self.output_dim)
+            outputs.append(F_L_hat)
 
-        return output2
+        # Stack outputs to match expected dimensions
+        outputs = torch.stack(outputs, dim=1)  # (batch_size, output_window, num_nodes, output_dim)
+        # import pdb;pdb.set_trace()
+
+
+
+
+
+
+        # output2=self.output_model(state2) # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+        # state2 = state2.sigmoid()
+
+        # self.output_window = 1
+        # output2 = output2.view(batch_size, self.num_nodes, self.output_window, self.output_dim) # (batch_size, self.num_nodes, self.output_window, self.output_dim)
+        # output2 = output2.permute(0, 2, 1, 3) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+
+        # 
+        return outputs
     
 
          
@@ -326,13 +625,14 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
             assert i == 0 # batch size is equal to the test set size
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
+
+
             outputs = net(batch_x)
             outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
             # batch_y = batch_y[:,:,:,2:3]
             for u in range(future):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
-                # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
                 print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
                 # import pdb;pdb.set_trace()
@@ -358,9 +658,9 @@ def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
         plt.legend(['MSE', 'MAE'])
         plt.xlabel('Prediction Horizon/frame')
         plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/nm_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
+        plt.savefig(f'./data/fig/per_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
-def eval_model_sample(mymodel,test_loader,model_prefix,history=90,future=60):
+def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,future=60, target_output=1,predict_index_end=3):
     mae = MeanAbsoluteError().cuda()
     mape=MeanAbsolutePercentageError().cuda()
     mse=MeanSquaredError().cuda()
@@ -368,59 +668,194 @@ def eval_model_sample(mymodel,test_loader,model_prefix,history=90,future=60):
     mse_list = []
     mae_list = []
     mape_list = []
+    MAE = {}
+    MAPE = {}
+    MSE = {}
+
+
+    for i in range(future):
+        MAE[i] = 0
+        MAPE[i] = 0
+        MSE[i] = 0
+
     with torch.no_grad():
         for i,(batch_x, batch_y) in enumerate (test_loader):
-            assert i == 0 # batch size is equal to the test set size
+            # assert i == 0 # batch size is equal to the test set size
+
+            # only predict last frame------
+            batch_y=batch_y[:,-target_output,:,:]
+            # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
+            batch_y = batch_y.unsqueeze(1) 
+            # ----------------------------- 
+            
+
+
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
             outputs = net(batch_x)
-            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+            # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+            batch_y = batch_y[:,:,:,1:2]
+            print('batch_y:',batch_y.shape)
             # for sample in range(0,batch_x.shape[0],100):
             # batch_y = batch_y[:,:,:,2:3]
-            for u in range(future):
+            import pdb;pdb.set_trace()
+            for u in range(outputs.shape[1]):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
-                print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_d, MAPE_d,MSE_d))
-                # import pdb;pdb.set_trace()
-                # if u==149:
-                #     for sample in range(0,batch_x.shape[0],100):
-                #         print('sample:',sample)
-                #         # print('output:',outputs[sample,u,:].view(30,8))
-                #         # print('label:',batch_y[sample,u,:].view(30,8))
-                #         print('output:',outputs[sample,u,134])
-                #         print('label:',batch_y[sample,u,134])
-                #         # import pdb;pdb.set_trace()
-                mse_list.append(MSE_d.item())
-                mae_list.append(MAE_d.item())
-                mape_list.append(MAPE_d.item())
+
+                MAE[u] += MAE_d
+                MAPE[u] += MAPE_d
+                MSE[u] += MSE_d
+        for u in range(outputs.shape[1]):
+            MAE_u = MAE[u]/(i+1)
+            MAPE_u = MAPE[u]/(i+1)
+            MSE_u = MSE[u]/(i+1)
+            print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u))
+        # import pdb;pdb.set_trace()
+        # if u==149:
+        #     for sample in range(0,batch_x.shape[0],100):
+        #         print('sample:',sample)
+        #         # print('output:',outputs[sample,u,:].view(30,8))
+        #         # print('label:',batch_y[sample,u,:].view(30,8))
+        #         print('output:',outputs[sample,u,134])
+        #         print('label:',batch_y[sample,u,134])
+        #         # import pdb;pdb.set_trace()
+            mse_list.append(MSE_u)
+            mae_list.append(MAE_u)
+            mape_list.append(MAPE_u)
         print('MSE:',mse_list)
         print('MAE:',mae_list)
         # print('MAPE:',mape_list)
         # plot mse and mae
         plt.figure()
-        plt.plot(mse_list)
-        plt.plot(mae_list)
+        if len(mse_list) == 1:
+            plt.scatter(future, mse_list[0])
+        else:
+            plt.plot(mse_list)
+
+        if len(mae_list) == 1:
+            plt.scatter(future, mae_list[0])
+        else:
+            plt.plot(mae_list)
         # plt.plot(mape_list)
         plt.legend(['MSE', 'MAE'])
         plt.xlabel('Prediction Horizon/frame')
         plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/nm_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
+        plt.savefig(f'./data/fig/p90_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
+
+
+def eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=90,future=60):
+
+
+    mae = MeanAbsoluteError().cuda()
+    mape=MeanAbsolutePercentageError().cuda()
+    mse=MeanSquaredError().cuda()
+    net = mymodel.eval().cuda()
+    mse_list = []
+    mae_list = []
+    mape_list = []
+    MAE = {}
+    MAPE = {}
+    MSE = {}
+
+
+    for i in range(future):
+        MAE[i] = 0
+        MAPE[i] = 0
+        MSE[i] = 0
+
+    with torch.no_grad():
+        for i,(batch_x, batch_y),(batch_x_nn,batch_y_nn) in enumerate(zip(test_loader,test_loader_nn)):
+            print(i)
+            # assert i == 0 # batch size is equal to the test set size
+
+            # only predict last frame------
+            # batch_y=batch_y[:,-target_output,:,:]
+            # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
+            # batch_y = batch_y.unsqueeze(1) 
+            # ----------------------------- 
+            
+
+
+            batch_x=batch_x.cuda()
+            batch_y=batch_y.cuda()
+            batch_x_nn = batch_x_nn.cuda()
+            outputs = net(batch_x)
+            batch_y_occupancy = batch_y_nn[:,:,:,0].clone().unsqueeze(3)
+
+            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size)
+            # for sample in range(0,batch_x.shape[0],100):
+            # batch_y = batch_y[:,:,:,2:3]
+            # import pdb;pdb.set_trace() 
+            for u in range(outputs.shape[1]):
+                import pdb;pdb.set_trace()
+                MAE_d=mae(outputs[:,u,:,:]*batch_y_occupancy[:,u,:,:],batch_y[:,u,:,:]*batch_y_occupancy[:,u,:,:]).cpu().detach().numpy()
+                MAPE_d=mape(outputs[:,u,:,:]*batch_y_occupancy[:,u,:,:],batch_y[:,u,:,:]*batch_y_occupancy[:,u,:,:]).cpu().detach().numpy()
+                # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
+                MSE_d = mse(outputs[:, u, :, :].contiguous()*batch_y_occupancy[:,u,:,:], batch_y[:, u, :, :].contiguous()*batch_y_occupancy[:,u,:,:]).cpu().detach().numpy()
+
+                MAE[u] += MAE_d
+                MAPE[u] += MAPE_d
+                MSE[u] += MSE_d
+        for u in range(outputs.shape[1]):
+            MAE_u = MAE[u]/(i+1)
+            MAPE_u = MAPE[u]/(i+1)
+            MSE_u = MSE[u]/(i+1)
+            print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u))
+        # import pdb;pdb.set_trace()
+        # if u==149:
+        #     for sample in range(0,batch_x.shape[0],100):
+        #         print('sample:',sample)
+        #         # print('output:',outputs[sample,u,:].view(30,8))
+        #         # print('label:',batch_y[sample,u,:].view(30,8))
+        #         print('output:',outputs[sample,u,134])
+        #         print('label:',batch_y[sample,u,134])
+        #         # import pdb;pdb.set_trace()
+            mse_list.append(MSE_u)
+            mae_list.append(MAE_u)
+            mape_list.append(MAPE_u)
+        print('MSE:',mse_list)
+        print('MAE:',mae_list)
+        # print('MAPE:',mape_list)
+        # plot mse and mae
+        plt.figure()
+        if len(mse_list) == 1:
+            plt.scatter(future, mse_list[0])
+        else:
+            plt.plot(mse_list)
+
+        if len(mae_list) == 1:
+            plt.scatter(future, mae_list[0])
+        else:
+            plt.plot(mae_list)
+        # plt.plot(mape_list)
+        plt.legend(['MSE', 'MAE'])
+        plt.xlabel('Prediction Horizon/frame')
+        plt.ylabel('Loss')
+        plt.savefig(f'./data/fig/per2num_p150_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
 def main():
     with_train = True 
-    continue_train = False
-    last_val_loss = 0.0025
+    continue_train_early_stop_val = False
+    last_val_loss = 0.017547
     voxel_size = int(128)
-    num_nodes = 240
-    # history,future=60,60
-    history,future=10,10
+    if voxel_size == 128:
+        num_nodes = 240
+    elif voxel_size == 64:
+        num_nodes = 1728
+    else:
+        num_nodes = None
+    history,future=90,60
+    # history,future=3,10
+    target_output = 1
     p_start = 1
-    # p_end = 28
-    p_end = 4
+    p_end = 28
+    # p_end = 4
     output_size = 1
+    predict_index_end=2
     num_epochs=20
     batch_size=64
     # batch_size=32 #G1 90
@@ -429,7 +864,12 @@ def main():
     # batch_size=25 #G2 T h2
     # batch_size=32 #T1 h1 fulledge
     hidden_dim = 100
-    model_prefix = f'testcutloop150_num_G1_h1_lre42_fulledge_{hidden_dim}'
+    # clip = 600
+    # model_prefix = f'90_150f_p1_num_G2_h1_fulledge_{hidden_dim}_{voxel_size}_{clip}'
+    model_prefix = f'out1_pred_end2_90_150f_p90_skip1_num_G2_h1_fulledge_{hidden_dim}_{voxel_size}'
+
+
+
     train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
@@ -449,15 +889,14 @@ def main():
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                             batch_size=batch_size,
-                                            shuffle=True,num_workers=4)
+                                            shuffle=True,num_workers=4,drop_last=True)
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=test_x.shape[0],
-                                            shuffle=False)
+                                            batch_size=int(test_x.shape[0]/10),
+                                            shuffle=False,drop_last=True)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                            batch_size=val_x.shape[0],
-                                            shuffle=False)           
+                                            batch_size=int(val_x.shape[0]/10),
+                                            shuffle=False,drop_last=True)           
     # load graph edges
-    voxel_size = int(256/2)
     edge_prefix = str(voxel_size)
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
     # r1, r2 = getedge('newedge',900)
@@ -485,7 +924,7 @@ def main():
         val_loss_list = []
 
         # Initialize the early stopping object
-        if continue_train:
+        if continue_train_early_stop_val:
             early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
         else:
             early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
@@ -500,16 +939,40 @@ def main():
             # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
                 # with record_function("model_training"):
             for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
+                # do batch normalization                 
+
+                # batch_y_object = torch.zeros_like(batch_y) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+                # batch_y_object[:,:,:,0] = batch_y[:,:,:,0]
+                # batch_y_object[:,:,:,3:6] = batch_y[:,:,:,3:6]
+                batch_y_object = batch_y.clone()
+
+                batch_y=batch_y[:,-target_output,:,:]
+                # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
+                batch_y = batch_y.unsqueeze(1)  
+
                 if torch.cuda.is_available():
                     batch_x=batch_x.cuda()
+                
                     batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-                outputs = mymodel(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+                    batch_y_object = batch_y_object.cuda()
+                    # zero like batch_y
+                    
+                # make sure we do not use future info by masking batch_y
+                # import pdb;pdb.set_trace()
+
+                # outputs = mymodel.forward_object(batch_x,batch_y_object) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+                # outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
+                outputs = mymodel(batch_x)
                 optimizer.zero_grad()
                 # break
+                # import pdb;pdb.set_trace()
 
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
-                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y)
+                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+                
+                # batch_y = batch_y[:,:,:,3-output_size:3] # (batch_size, self.output_window, self.num_nodes, output_size)
+                # import pdb;pdb.set_trace()
                 loss = criterion(outputs,batch_y)
                 loss_total=loss_total+loss.item()
                 #backpropagation
@@ -532,7 +995,8 @@ def main():
                 #save and reloasd
                 torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
                 print('model saved')
-            val_loss = get_val_loss(mymodel,val_loader,criterion)
+            # val_loss = get_val_loss(mymodel,val_loader,criterion,output_size)
+            val_loss = get_val_loss(mymodel,val_loader,criterion,output_size,target_output,predict_index_end)
             val_loss_list.append(val_loss)
             print("val_loss:%1.5f" % (val_loss))
             # Step the scheduler with the validation loss
@@ -563,7 +1027,15 @@ def main():
 
 
     with torch.no_grad():
-        eval_model_sample(mymodel,test_loader,model_prefix,history=history,future=future)
+        # train_x_nn,train_y_nn,test_x_nn,test_y_nn,val_x_nn,val_y_nn = get_train_test_data_on_users_all_videos_no_norm(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        # test_x_nn = torch.from_numpy(test_x_nn)
+        # test_y_nn = torch.from_numpy(test_y_nn)
+        # test_dataset_nn=torch.utils.data.TensorDataset(test_x_nn,test_y_nn)
+        # test_loader_nn = torch.utils.data.DataLoader(dataset=test_dataset_nn,
+        #                                         batch_size=int(test_x_nn.shape[0]/10),
+        #                                         shuffle=False,drop_last=True)
+        eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output)
+        # eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=history,future=future)
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':

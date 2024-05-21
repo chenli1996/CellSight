@@ -67,7 +67,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
-        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_LR.npy')
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_LR.npy')
         test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_LR.npy')
         # val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}_LR.npy')
         # val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}_LR.npy')       
@@ -141,7 +141,10 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
         train_y = np.concatenate(train_y)
         return train_x,train_y
     # if data is saved, load it
-    if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_TLR.npy'):
+    # clip = 600
+    # print('clip:',clip)
+    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
+    if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_TLR.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
@@ -162,13 +165,21 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
 
 
 voxel_size = int(128)
-num_nodes = 240
+if voxel_size == 128:
+    num_nodes = 240
+elif voxel_size == 64:
+    num_nodes = 1728
+else:
+    num_nodes = None
 # history = 10
 # for future in [1,10,30,60]:
 # history=90
 # for future in [1,10,30,60]:
 history = 90
-for future in [60]:
+predict_end_index = 3
+output_size = 1
+
+for future in [150]:
 # for future in [1,10,30,60,150]:
     print(f'history:{history},future:{future}')
     p_start = 1
@@ -205,21 +216,24 @@ for future in [60]:
     MAE_list = []
     MSE_list = []
     u=future-1
-    MAE_d = mae(test_y[:,u,:,2:3],test_y_TLR[:,u,:,2:3]).cpu().detach().numpy()
-    MSE_d = mse(test_y[:, u, :, 2:3].contiguous(), test_y_TLR[:, u, :, 2:3].contiguous()).cpu().detach().numpy()    
+    # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_end_index)
+    # test_y_TLR,test_y = mask_outputs_batch_y(test_y_TLR, test_y,output_size,predict_end_index)
+    import pdb;pdb.set_trace()
+    MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+    MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
     print(f'MAE:{MAE_d},MSE:{MSE_d},history:{history},future:{future}')
     # get the var of test_y[:,u,:,2:3] after masking off all zeros
-    test_y = test_y_TLR
-    test_y = test_y.cpu().detach().numpy()
-    test_y = test_y[:,u,:,2:3]
-    mask = test_y != 0
-    test_y = test_y[mask]
-    var = np.var(test_y)
-    # get the distrubution result of test_y
-    plt.hist(test_y.ravel(),bins=100)
-    plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
+    # test_y = test_y_TLR
+    # test_y = test_y.cpu().detach().numpy()
+    # test_y = test_y[:,u,:,2:3]
+    # mask = test_y != 0
+    # test_y = test_y[mask]
+    # var = np.var(test_y)
+    # # get the distrubution result of test_y
+    # plt.hist(test_y.ravel(),bins=100)
+    # plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
 
-    print(f'var:{var},history:{history},future:{future}')
+    # print(f'var:{var},history:{history},future:{future}')
 
 
     del test_y,test_y_TLR

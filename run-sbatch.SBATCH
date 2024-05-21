@@ -4,10 +4,10 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=03:00:00
-#SBATCH --mem=64GB	
+#SBATCH --mem=256GB	
 #SBATCH --gres=gpu:h100:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/slurm90_60_G1_full_lre4_dim100_%j.out
+#SBATCH --output=./log/slurm_p1_90_30_G2_full_lre4_dim100_vs64_%j.out
 
 module purge
 
