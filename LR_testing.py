@@ -176,11 +176,11 @@ else:
 # history=90
 # for future in [1,10,30,60]:
 history = 90
-predict_end_index = 3
+predict_end_index = 2
 output_size = 1
 
-for future in [150]:
-# for future in [1,10,30,60,150]:
+# for future in [60]:
+for future in [1,10,30,60,90,120,150]:
     print(f'history:{history},future:{future}')
     p_start = 1
     p_end = 28
@@ -218,10 +218,22 @@ for future in [150]:
     u=future-1
     # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_end_index)
     # test_y_TLR,test_y = mask_outputs_batch_y(test_y_TLR, test_y,output_size,predict_end_index)
-    import pdb;pdb.set_trace()
-    MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+    # import pdb;pdb.set_trace()
+    # get a large loss for TLR
+    # for i in range(0,test_y.size(0),1):
+    #     # import pdb;pdb.set_trace()
+    #     if i==553:
+    #         print('TLR',test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
+    #         print('gt',test_y[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
+    #     MSE = mse(test_y[i, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()
+    #     MAE = mae(test_y[i, u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[i,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+    #     # import pdb;pdb.set_trace()
+    #     if abs(MSE-0.138) < 0.1 and MAE>0.2:
+    #         print(f'MSE:{MSE},MAE:{MAE}',f'index:{i}')
+    
     MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
-    print(f'MAE:{MAE_d},MSE:{MSE_d},history:{history},future:{future}')
+    MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+    print(f'MSE:{MSE_d},MAE:{MAE_d}',f'history:{history},future:{future}')
     # get the var of test_y[:,u,:,2:3] after masking off all zeros
     # test_y = test_y_TLR
     # test_y = test_y.cpu().detach().numpy()

@@ -86,14 +86,14 @@ def mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end):
     # import pdb;pdb.set_trace()
     return outputs, batch_y
 
-def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predict_index_end=3):
+def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predict_index_end=3,object_driven=False):
     # get val_loss
     mymodel.eval()
     val_loss = 0
     with torch.no_grad():
         iter2 = 0
         for i,(batch_x, batch_y) in enumerate (val_loader):
-            
+            batch_y_object = batch_y.clone()
             batch_y=batch_y[:,-target_output,:,:]
             # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
             batch_y = batch_y.unsqueeze(1)  
@@ -101,9 +101,17 @@ def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predic
             if torch.cuda.is_available():
                 batch_x=batch_x.cuda()
                 batch_y=batch_y.cuda()
-            outputs = mymodel(batch_x)
+                batch_y_object = batch_y_object.cuda()
+            if object_driven:
+                outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
+            else:
+                outputs = mymodel(batch_x)
+            
             # import pdb;pdb.set_trace()
-            outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end=3)                
+            #  -------------
+            # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end=3) 
+            batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end]               
+            # -------------
             loss = criterion(outputs,batch_y)
             val_loss += loss.item()
             iter2+=1

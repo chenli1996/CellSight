@@ -2,6 +2,7 @@
 
 from cgi import test
 from math import e
+from re import T
 from turtle import forward
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -100,7 +101,7 @@ class GraphGRUCell(nn.Module):
         self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
 
         self.head = 1
-        self.multiGAT = True
+        self.multiGAT = False
         self.dropout = 0.2
         self.OriginalGAT = True
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
@@ -290,18 +291,18 @@ class GraphGRU(nn.Module):
         self.head = 1
         self.multiGAT = False
         self.dropout = 0.2
-        self.OriginalGAT = False
+        self.OriginalGAT = True
         self.num_units = hidden_size
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
         if self.OriginalGAT:
-            self.GCN3 = GATConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
-            self.GCN4 = GATConv(self.num_units,self.num_units,concat=False)
+            self.GCN3_1 = GATConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
+            self.GCN4_1 = GATConv(self.num_units,self.num_units,concat=False)
         else:
             # self.GAT3 = GATv2Conv(self.num_units+self.input_dim, self.num_units,heads=self.head,concat=False)
             # self.GAT4 = GATv2Conv(self.num_units*self.head,self.num_units,concat=False)
 
-            self.GAT3 = TransformerConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
-            self.GAT4 = TransformerConv(self.num_units,self.num_units,concat=False)
+            self.GAT3_1 = TransformerConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
+            self.GAT4_1 = TransformerConv(self.num_units,self.num_units,concat=False)
         self.afterG = nn.Linear(self.num_units, self.output_dim)
         self.mylinear = nn.Linear(self.output_dim, self.output_dim)
         self.batch_norm = nn.BatchNorm1d(self.input_dim)
@@ -434,11 +435,11 @@ class GraphGRU(nn.Module):
         state2 = state2.relu()
         output2=self.output_model(state2) # (batch_size, self.num_nodes, self.output_window * self.output_dim)
         # state2 = state2.sigmoid()
-        self.output_window = 1
+        # self.output_window = 1
         output2 = output2.view(batch_size, self.num_nodes, self.output_window, self.output_dim) # (batch_size, self.num_nodes, self.output_window, self.output_dim)
         output2 = output2.permute(0, 2, 1, 3) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
         output2 = output2.sigmoid() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-        y_occupancy = y[:,-30,:,0].unsqueeze(1).unsqueeze(3) # (batch_size, 1, num_nodes, 1) !!!!!!!!!!!!!!!!!!!change to -30 or -1
+        y_occupancy = y[:,-1,:,1].unsqueeze(1).unsqueeze(3) # (batch_size, 1, num_nodes, 1) !!!!!!!!!!!!!!!!!!!change to -30 or -1
         # import pdb;pdb.set_trace()
 
         
@@ -481,22 +482,22 @@ class GraphGRU(nn.Module):
         # Pass the batched graph to the model
         if self.OriginalGAT:
             if self.multiGAT:
-                x = self.GCN3(batch.x, batch.edge_index)
+                x = self.GCN3_1(batch.x, batch.edge_index)
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout)
-                x = self.GCN4(x, batch.edge_index)
+                x = self.GCN4_1(x, batch.edge_index)
                 x = F.relu(x)
             else:
-                x = self.GCN3(batch.x, batch.edge_index)
+                x = self.GCN3_1(batch.x, batch.edge_index)
         else:
             if self.multiGAT:
-                x = self.GAT3(batch.x, batch.edge_index)
+                x = self.GAT3_1(batch.x, batch.edge_index)
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout)
-                x = self.GAT4(x, batch.edge_index)
+                x = self.GAT4_1(x, batch.edge_index)
                 x = F.relu(x)
             else:
-                x = self.GAT3(batch.x, batch.edge_index)
+                x = self.GAT3_1(batch.x, batch.edge_index)
 
         # biases = self.biases[(output_size,)]
         # x += biases
@@ -671,7 +672,7 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
     MAE = {}
     MAPE = {}
     MSE = {}
-
+    criterion = torch.nn.MSELoss()    
 
     for i in range(future):
         MAE[i] = 0
@@ -679,26 +680,37 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
         MSE[i] = 0
 
     with torch.no_grad():
+        # import pdb;pdb.set_trace()
+
         for i,(batch_x, batch_y) in enumerate (test_loader):
             # assert i == 0 # batch size is equal to the test set size
 
+            # import pdb;pdb.set_trace()
             # only predict last frame------
             batch_y=batch_y[:,-target_output,:,:]
             # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
             batch_y = batch_y.unsqueeze(1) 
             # ----------------------------- 
-            
-
 
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
-            outputs = net(batch_x)
+            outputs = net(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+            # -------------
             # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
-            batch_y = batch_y[:,:,:,1:2]
-            print('batch_y:',batch_y.shape)
-            # for sample in range(0,batch_x.shape[0],100):
-            # batch_y = batch_y[:,:,:,2:3]
-            import pdb;pdb.set_trace()
+            batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, 1, self.num_nodes, output_dim)
+            # ----------------
+            # if i==0:
+            # u = future-1
+            # for index in range(0,outputs.size(0),1):
+            #     if index+i*outputs.size(0)==1682:
+            #         print('Graph',outputs[index, :, :, :].view(30,8))
+            #         print('GT',batch_y[index, :, :, :].view(30,8))
+            #     # import pdb;pdb.set_trace()
+            #     MSE_temp = mse(batch_y[index, :, :, :].contiguous(), outputs[index, :, :, :].contiguous()).cpu().detach().numpy()
+            #     MAE_temp = mae(batch_y[index, :,:,:],outputs[index,:,:,:]).cpu().detach().numpy()
+            #     if abs(MSE_temp-0.072)<0.05 and MAE_temp<0.10:
+            #         print(f'MSE:{MSE_temp},MAE:{MAE_temp}',f'index:{index+i*outputs.size(0)}')
+
             for u in range(outputs.shape[1]):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
@@ -837,10 +849,11 @@ def eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output
         plt.savefig(f'./data/fig/per2num_p150_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
-def main():
-    with_train = True 
+def main(future=10):
+    with_train = True
     continue_train_early_stop_val = False
     last_val_loss = 0.017547
+    object_driven = True
     voxel_size = int(128)
     if voxel_size == 128:
         num_nodes = 240
@@ -848,7 +861,8 @@ def main():
         num_nodes = 1728
     else:
         num_nodes = None
-    history,future=90,60
+    history = 90
+    future=future
     # history,future=3,10
     target_output = 1
     p_start = 1
@@ -856,8 +870,9 @@ def main():
     # p_end = 4
     output_size = 1
     predict_index_end=2
-    num_epochs=20
-    batch_size=64
+    num_epochs=15
+    # batch_size = 16
+    batch_size=64 #multi_out
     # batch_size=32 #G1 90
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
@@ -865,8 +880,12 @@ def main():
     # batch_size=32 #T1 h1 fulledge
     hidden_dim = 100
     # clip = 600
-    # model_prefix = f'90_150f_p1_num_G2_h1_fulledge_{hidden_dim}_{voxel_size}_{clip}'
-    model_prefix = f'out1_pred_end2_90_150f_p90_skip1_num_G2_h1_fulledge_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
+    model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
+
 
 
 
@@ -887,15 +906,27 @@ def main():
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     val_dataset=torch.utils.data.TensorDataset(val_x,val_y)
 
+    # test_dataset=torch.utils.data.TensorDataset(val_x,val_y)
+    # val_dataset=torch.utils.data.TensorDataset(test_x,test_y)
+
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                             batch_size=batch_size,
                                             shuffle=True,num_workers=4,drop_last=True)
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=int(test_x.shape[0]/10),
+                                            batch_size=int(test_x.shape[0]/1),
                                             shuffle=False,drop_last=True)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                             batch_size=int(val_x.shape[0]/10),
-                                            shuffle=False,drop_last=True)           
+                                            shuffle=False,drop_last=True)     
+    # test_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+    #                                         batch_size=int(val_x.shape[0]),
+    #                                         shuffle=False,drop_last=True)
+    # val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+    #                                         batch_size=int(val_x.shape[0]),
+    #                                         shuffle=False,drop_last=True)  
+    # check test_loader and val_loader are same
+    # import pdb;pdb.set_trace()
+    # print('len of train_loader:',len(train_loader),'len of test_loader:',len(test_loader),'len of val_loader:',len(val_loader))  
     # load graph edges
     edge_prefix = str(voxel_size)
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
@@ -917,6 +948,7 @@ def main():
         # learning_rate=0.0003
         learning_rate = 0.0003
         criterion = torch.nn.MSELoss()    # mean-squared error for regression
+        # criterion = torch.nn.L1Loss()    # mean-squared error for regression
         # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
         # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
@@ -959,19 +991,21 @@ def main():
                     
                 # make sure we do not use future info by masking batch_y
                 # import pdb;pdb.set_trace()
-
+                if object_driven:
                 # outputs = mymodel.forward_object(batch_x,batch_y_object) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-                # outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
-                outputs = mymodel(batch_x)
+                    outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
+                else:
+                    outputs = mymodel(batch_x)
                 optimizer.zero_grad()
                 # break
                 # import pdb;pdb.set_trace()
 
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
-                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
-                
-                # batch_y = batch_y[:,:,:,3-output_size:3] # (batch_size, self.output_window, self.num_nodes, output_size)
+                # ---------
+                # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+                batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
+                # ---------
                 # import pdb;pdb.set_trace()
                 loss = criterion(outputs,batch_y)
                 loss_total=loss_total+loss.item()
@@ -996,7 +1030,7 @@ def main():
                 torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
                 print('model saved')
             # val_loss = get_val_loss(mymodel,val_loader,criterion,output_size)
-            val_loss = get_val_loss(mymodel,val_loader,criterion,output_size,target_output,predict_index_end)
+            val_loss = get_val_loss(mymodel,val_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
             val_loss_list.append(val_loss)
             print("val_loss:%1.5f" % (val_loss))
             # Step the scheduler with the validation loss
@@ -1034,9 +1068,14 @@ def main():
         # test_loader_nn = torch.utils.data.DataLoader(dataset=test_dataset_nn,
         #                                         batch_size=int(test_x_nn.shape[0]/10),
         #                                         shuffle=False,drop_last=True)
-        eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output)
+        eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output,predict_index_end=predict_index_end)   
         # eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=history,future=future)
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
-    main()
+    # for future in [1,10,30,60,90,120,150]:
+    # reverse
+    # for future in [150,90,60,30,10,1]:
+    for future in [60]:
+        print(f'future:{future}')
+        main(future)
