@@ -106,11 +106,14 @@ def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predic
                 outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
             else:
                 outputs = mymodel(batch_x)
-            
+            #  -------------            
             # import pdb;pdb.set_trace()
-            #  -------------
+            if predict_index_end == 3:
+                # occlusion prediction, we have object driven and need mask
+                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end=predict_index_end)
+            else:
             # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end=3) 
-            batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end]               
+                batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end]               
             # -------------
             loss = criterion(outputs,batch_y)
             val_loss += loss.item()
@@ -234,12 +237,17 @@ def get_history_future_data_full(data,history,future):
     data_y = []
     if data.shape[0] <= future + history:
         return data_x,data_y
-    for i in range(0,len(data)-history-future):
-    #    import pdb;pdb.set_trace()
-       data_x.append(data[i:i+history])
-       data_y.append(data[i+history:i+history+future])
-    data_x=np.array(data_x)
-    data_y=np.array(data_y)
+    # for i in range(0,len(data)-history-future):
+    # #    import pdb;pdb.set_trace()
+    #    data_x.append(data[i:i+history])
+    #    data_y.append(data[i+history:i+history+future])
+    # data_x=np.array(data_x)
+    # data_y=np.array(data_y)
+    i = 0
+    while i < len(data)-history-future:
+        data_x.append(data[i:i+history])
+        data_y.append(data[i+history:i+history+future])
+        i += 2
     # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
     # data_y = data_y[:,:,:,2:3]#only occlusion feature
 

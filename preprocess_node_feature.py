@@ -1,6 +1,7 @@
 import os
 from tqdm import tqdm
 import pandas as pd
+import numpy as np
 
 def change2num_points_from_percentage_TLR():
     # read data
@@ -65,7 +66,11 @@ def change2_percentage_from_num_points():
             output_node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
             original_df = pd.read_csv(original_node_feature_path)
             # update occlusion_feature=occupancy_feature*occupancy_feature
-            original_df['occlusion_feature'] = original_df['occlusion_feature']/original_df['occupancy_feature']
+            # original_df['occlusion_feature'] = original_df['occlusion_feature']/original_df['occupancy_feature']
+            # original_df['occlusion_feature'] = 0 if original_df['occupancy_feature'] == 0 else original_df['occlusion_feature']/original_df['occupancy_feature']
+
+            original_df['occlusion_feature'] = np.where(original_df['occupancy_feature'] == 0, 0, original_df['occlusion_feature'] / original_df['occupancy_feature'])
+            # import pdb; pdb.set_trace()
             # save to the new file
             # check directory exists
             if not os.path.exists(f'./data/{prefix}'):

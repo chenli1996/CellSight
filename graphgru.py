@@ -696,8 +696,10 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             batch_y=batch_y.cuda()
             outputs = net(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
             # -------------
-            # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
-            batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, 1, self.num_nodes, output_dim)
+            if predict_index_end==3:
+                outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+            else:
+                batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, 1, self.num_nodes, output_dim)
             # ----------------
             # if i==0:
             # u = future-1
@@ -853,7 +855,7 @@ def main(future=10):
     with_train = True
     continue_train_early_stop_val = False
     last_val_loss = 0.017547
-    object_driven = True
+    object_driven = False
     voxel_size = int(64)
     if voxel_size == 128:
         num_nodes = 240
@@ -872,7 +874,7 @@ def main(future=10):
     predict_index_end=2
     num_epochs=15
     # batch_size = 16
-    batch_size=64 #multi_out
+    batch_size=16 #multi_out
     # batch_size=32 #G1 90
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
@@ -884,7 +886,8 @@ def main(future=10):
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
     # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    model_prefix = f'out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
+    model_prefix = f'object{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
+    print(model_prefix)
 
 
 
@@ -1003,8 +1006,10 @@ def main(future=10):
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
                 # ---------
-                # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
-                batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
+                if predict_index_end==3:
+                    outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+                else:
+                    batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
                 # ---------
                 # import pdb;pdb.set_trace()
                 loss = criterion(outputs,batch_y)
@@ -1076,6 +1081,6 @@ if __name__ == '__main__':
     # for future in [1,10,30,60,90,120,150]:
     # reverse
     # for future in [150,90,60,30,10,1]:
-    for future in [60]:
+    for future in [60, 150 , 30]:
         print(f'future:{future}')
         main(future)

@@ -7,7 +7,7 @@
 #SBATCH --mem=256GB	
 #SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/mymult_rmsei%j.out
+#SBATCH --output=./log/mymult_msei_64fov%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
 
