@@ -854,7 +854,7 @@ def main(future=10):
     continue_train_early_stop_val = False
     last_val_loss = 0.017547
     object_driven = True
-    voxel_size = int(128)
+    voxel_size = int(64)
     if voxel_size == 128:
         num_nodes = 240
     elif voxel_size == 64:
@@ -882,9 +882,9 @@ def main(future=10):
     # clip = 600
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
-    model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    # model_prefix = f'out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
+    model_prefix = f'out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
 
 
 
