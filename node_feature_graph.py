@@ -79,7 +79,7 @@ def generate_node_feature():
     # trajectory_index = 0
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
-    voxel_size = int(64)
+    voxel_size = int(128)
     min_bounds = np.array([-251,    0, -241]) 
     max_bounds = np.array([ 262, 1023,  511])
     
