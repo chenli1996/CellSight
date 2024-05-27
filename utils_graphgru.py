@@ -38,6 +38,10 @@ class EarlyStopping:
 
     def __call__(self, val_loss, model):
         score = -val_loss
+        # if score is nan, return
+        if np.isnan(score):
+            self.early_stop = True
+            return
 
         if self.best_score is None:
             self.best_score = score
@@ -247,7 +251,7 @@ def get_history_future_data_full(data,history,future):
     while i < len(data)-history-future:
         data_x.append(data[i:i+history])
         data_y.append(data[i+history:i+history+future])
-        i += 2
+        i += 1
     # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
     # data_y = data_y[:,:,:,2:3]#only occlusion feature
 

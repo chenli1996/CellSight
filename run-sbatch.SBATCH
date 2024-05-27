@@ -4,10 +4,10 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=6:00:00
-#SBATCH --mem=256GB	
-#SBATCH --gres=gpu:a100:1
+#SBATCH --mem=128GB	
+#SBATCH --gres=gpu:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/mymult_msei_64fov%j.out
+#SBATCH --output=./log/multi_mse_lr1e4_G1_vs128_fov_dim128_%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
 

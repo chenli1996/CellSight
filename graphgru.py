@@ -1,7 +1,9 @@
 #!/bin/env python
 
+from audioop import rms
 from cgi import test
 from math import e
+from operator import le
 from re import T
 from turtle import forward
 from torch.utils.data import DataLoader
@@ -266,8 +268,6 @@ class GraphGRU(nn.Module):
         # add a cpu device for testing
         if not torch.cuda.is_available():
             self.device = torch.device('cpu')
-
-        # -------------------构造模型-----------------------------
         self.GraphGRU_model = GraphGRUCell(self.gru_units, self.num_nodes, self.r1, self.r2, self.batch_size, self.device, self.input_dim)
         self.GraphGRU_model1 = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.input_dim)
         self.GraphGRU_model_o = GraphGRUCell(self.gru_units, self.num_nodes, self.r1,self.r2, self.batch_size, self.device, self.output_dim+1)
@@ -289,9 +289,9 @@ class GraphGRU(nn.Module):
         self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
 
         self.head = 1
-        self.multiGAT = False
+        self.multiGAT = True
         self.dropout = 0.2
-        self.OriginalGAT = True
+        self.OriginalGAT = False
         self.num_units = hidden_size
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
         if self.OriginalGAT:
@@ -665,19 +665,23 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
     mae = MeanAbsoluteError().cuda()
     mape=MeanAbsolutePercentageError().cuda()
     mse=MeanSquaredError().cuda()
+    rmse = MeanSquaredError(squared=False).cuda()
     net = mymodel.eval().cuda()
     mse_list = []
     mae_list = []
     mape_list = []
+    rmse_list = []
     MAE = {}
     MAPE = {}
     MSE = {}
-    criterion = torch.nn.MSELoss()    
+    RMSE = {}
+    # criterion = torch.nn.MSELoss()    
 
     for i in range(future):
         MAE[i] = 0
         MAPE[i] = 0
         MSE[i] = 0
+        RMSE[i] = 0
 
     with torch.no_grad():
         # import pdb;pdb.set_trace()
@@ -718,15 +722,18 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
                 MAPE_d=mape(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+                RMSE_d = rmse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
 
                 MAE[u] += MAE_d
                 MAPE[u] += MAPE_d
                 MSE[u] += MSE_d
+                RMSE[u] += RMSE_d
         for u in range(outputs.shape[1]):
             MAE_u = MAE[u]/(i+1)
             MAPE_u = MAPE[u]/(i+1)
             MSE_u = MSE[u]/(i+1)
-            print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u))
+            RMSE_u = RMSE[u]/(i+1)
+            print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f, RMSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u,RMSE_u))
         # import pdb;pdb.set_trace()
         # if u==149:
         #     for sample in range(0,batch_x.shape[0],100):
@@ -739,8 +746,11 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             mse_list.append(MSE_u)
             mae_list.append(MAE_u)
             mape_list.append(MAPE_u)
+            rmse_list.append(RMSE_u)
+
         print('MSE:',mse_list)
         print('MAE:',mae_list)
+        print('RMSE:',rmse_list)
         # print('MAPE:',mape_list)
         # plot mse and mae
         plt.figure()
@@ -851,12 +861,36 @@ def eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output
         plt.savefig(f'./data/fig/per2num_p150_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
+class SoftDiceLoss(nn.Module):
+    def __init__(self, smooth=1e-2):
+        super(SoftDiceLoss, self).__init__()
+        self.smooth = smooth
+
+    def forward(self, preds, targets):
+        # Apply sigmoid to the predicted outputs to get probabilities
+        preds = torch.sigmoid(preds)
+        targets = torch.sigmoid(targets)
+        
+        # Flatten the tensors
+        preds = preds.view(-1)
+        targets = targets.view(-1)
+        
+        # Calculate intersection and union
+        intersection = (preds * targets).sum()
+        union = preds.sum() + targets.sum()
+        
+        # Calculate Soft Dice coefficient
+        soft_dice = (2.0 * intersection + self.smooth) / (union + self.smooth)
+        
+        # Return Soft Dice Loss
+        return 1.0 - soft_dice
+    
 def main(future=10):
     with_train = True
     continue_train_early_stop_val = False
-    last_val_loss = 0.017547
+    last_val_loss = 0.210087
     object_driven = False
-    voxel_size = int(64)
+    voxel_size = int(128)
     if voxel_size == 128:
         num_nodes = 240
     elif voxel_size == 64:
@@ -872,22 +906,24 @@ def main(future=10):
     # p_end = 4
     output_size = 1
     predict_index_end=2
-    num_epochs=15
+    num_epochs=50
     # batch_size = 16
-    batch_size=16 #multi_out
+    batch_size=32 #multi_out
     # batch_size=32 #G1 90
     # batch_size=64 # 256 model
     # batch_size=64*2 #150 64GB
     # batch_size=25 #G2 T h2
     # batch_size=32 #T1 h1 fulledge
-    hidden_dim = 100
+    hidden_dim = 128
+
     # clip = 600
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
     # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    model_prefix = f'object{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
-    print(model_prefix)
+    model_prefix = f'multi2lr1e4_object{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
+
+    print(model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
 
 
 
@@ -919,7 +955,7 @@ def main(future=10):
                                             batch_size=int(test_x.shape[0]/1),
                                             shuffle=False,drop_last=True)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                            batch_size=int(val_x.shape[0]/10),
+                                            batch_size=int(val_x.shape[0]/1),
                                             shuffle=False,drop_last=True)     
     # test_loader = torch.utils.data.DataLoader(dataset=val_dataset,
     #                                         batch_size=int(val_x.shape[0]),
@@ -949,22 +985,32 @@ def main(future=10):
     # print(mymodel)
     if with_train:
         # learning_rate=0.0003
-        learning_rate = 0.0003
-        criterion = torch.nn.MSELoss()    # mean-squared error for regression
-        # criterion = torch.nn.L1Loss()    # mean-squared error for regression
+        if predict_index_end==3:
+            learning_rate = 0.0003  
+            criterion = torch.nn.MSELoss()    # mean-squared error for regression
+        else:
+            learning_rate = 0.0001
+            # criterion1 = torch.nn.MSELoss()    # mean-squared error for regression
+            criterion = torch.nn.MSELoss()    # mean-squared error for regression
+            # criterion = torch.nn.L1Loss()    # L1 loss
+            # new loss using soft dice loss
+            # criterion = SoftDiceLoss()
+            # criterion = torch.nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
+        
         # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
+        # optimizer = torch.optim.SGD(mymodel.parameters(), lr=learning_rate, momentum=0.9)
         # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
         lossa=[]
         val_loss_list = []
 
         # Initialize the early stopping object
         if continue_train_early_stop_val:
-            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
+            early_stopping = EarlyStopping(patience=10, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
         else:
-            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
+            early_stopping = EarlyStopping(patience=10, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
         # learning rate scheduler 
-        scheduler = ReduceLROnPlateau(optimizer, 'min', patience=1, factor=0.1, min_lr=1e-6)
+        scheduler = ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.1, min_lr=1e-6)
 
         for epochs in range(1,num_epochs+1):
             mymodel.train()
@@ -1012,15 +1058,26 @@ def main(future=10):
                     batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
                 # ---------
                 # import pdb;pdb.set_trace()
+                # outputs = outputs.view(-1,num_nodes)
+                # batch_y = batch_y.view(-1,num_nodes)
+
+                # outputs = outputs.squeeze(3).squeeze(1)
+                # batch_y = batch_y.squeeze(3).squeeze(1)
+
                 loss = criterion(outputs,batch_y)
                 loss_total=loss_total+loss.item()
                 #backpropagation
                 loss.backward()
+
+                # Clip gradients
+                # torch.nn.utils.clip_grad_norm_(mymodel.parameters(), max_norm=1)
+
                 optimizer.step()
                 iter1+=1
                 # print loss
-                if i % 10 == 0:
+                if i % 100 == 0:
                     print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
+                    # print(criterion1(outputs,batch_y).item())
             # Print profiler results
             # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
             # break                          
@@ -1038,6 +1095,12 @@ def main(future=10):
             val_loss = get_val_loss(mymodel,val_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
             val_loss_list.append(val_loss)
             print("val_loss:%1.5f" % (val_loss))
+
+            # check the tesing loss for debug
+            test_loss = get_val_loss(mymodel,test_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
+            print("test_loss:%1.5f" % (test_loss))
+
+
             # Step the scheduler with the validation loss
             scheduler.step(val_loss)  
             # Log the last learning rate
@@ -1078,9 +1141,7 @@ def main(future=10):
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
-    # for future in [1,10,30,60,90,120,150]:
-    # reverse
-    # for future in [150,90,60,30,10,1]:
-    for future in [60, 150 , 30]:
+    for future in [150,60,30,10]:
+    # for future in [60]:
         print(f'future:{future}')
         main(future)
