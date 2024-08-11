@@ -989,7 +989,7 @@ def main(future=10):
             learning_rate = 0.0003  
             criterion = torch.nn.MSELoss()    # mean-squared error for regression
         else:
-            learning_rate = 0.0001
+            learning_rate = 0.0003
             # criterion1 = torch.nn.MSELoss()    # mean-squared error for regression
             criterion = torch.nn.MSELoss()    # mean-squared error for regression
             # criterion = torch.nn.L1Loss()    # L1 loss
