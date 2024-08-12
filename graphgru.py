@@ -293,6 +293,7 @@ class GraphGRU(nn.Module):
         self.dropout = 0.2
         self.OriginalGAT = False
         self.num_units = hidden_size
+        self.bi_rnn = True
         # self.GCN3 = GATConv(self.num_units+self.input_dim, self.num_units)
         if self.OriginalGAT:
             self.GCN3_1 = GATConv(self.num_units+output_dim+1, self.num_units,heads=self.head,concat=False)
@@ -379,9 +380,15 @@ class GraphGRU(nn.Module):
         state1 = state1.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
         #output1 = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window * self.output_dim)
 
-        state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
-        # import pdb;pdb.set_trace()
-        state2=self.fc1(state2) # (batch_size, self.num_nodes, self.gru_units)
+        if self.bi_rnn:
+        #bi-rnn
+            state2 = torch.cat([state, state1], dim=2) # (batch_size, self.num_nodes, self.gru_units*2)
+            state2=self.fc1(state2) # (batch_size, self.num_nodes, self.gru_units)
+        #no bi-rnn
+        else:
+            state2 = state
+
+
         state2 = state2.relu()
         output2=self.output_model(state2) # (batch_size, self.num_nodes, self.output_window * self.output_dim)
         # state2 = state2.sigmoid()
