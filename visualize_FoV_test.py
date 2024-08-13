@@ -1,7 +1,7 @@
 import open3d as o3d
 
 # # Load the point cloud data
-point_cloud = o3d.io.read_point_cloud("../8i/longdress/longdress/Ply/longdress_vox10_1097.ply")
+point_cloud = o3d.io.read_point_cloud("../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_1097.ply")
 
 # # Visualize the point cloud
 # # o3d.visualization.draw_geometries([point_cloud])
@@ -54,7 +54,7 @@ trajectory_line_set = create_trajectory_lines(trajectory_positions)
 import open3d as o3d
 
 # Load the point cloud
-point_cloud = o3d.io.read_point_cloud("../8i/longdress/longdress/Ply/longdress_vox10_1097.ply")
+point_cloud = o3d.io.read_point_cloud("../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_1097.ply")
 
 # Function to convert Euler angles to direction vector (simplified)
 def euler_to_direction(yaw, pitch, roll):

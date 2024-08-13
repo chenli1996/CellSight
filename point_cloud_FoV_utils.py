@@ -412,9 +412,7 @@ if __name__ == '__main__':
     # Load your point cloud
     point_cloud_path = '../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_1051.ply'
     pcd = o3d.io.read_point_cloud(point_cloud_path)
-    # randomly add 100 new points in the current point cloud uniformly distributed in the current point cloud space
-    # new_pcd = randomly_add_points_in_point_cloud(pcd, 100000)
-    # pcd += new_pcd
+
     # Define camera intrinsic parameters (example values)
     image_width, image_height = np.array([1280, 720])
     intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
@@ -429,6 +427,7 @@ if __name__ == '__main__':
     # get the minimum and maximum bound of the point cloud
     min_bound = np.min(np.asarray(pcd.points), axis=0)
     max_bound = np.max(np.asarray(pcd.points), axis=0)
+
     down_pcd_remove, original_pcd_remove = downsampele_hidden_point_removal_trace(pcd, t, 
                     voxel_size=1, min_bound=min_bound, max_bound=max_bound, approximate_class=False)
     # Visualize the filtered point cloud
@@ -437,6 +436,9 @@ if __name__ == '__main__':
                            intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
                            raw_mode=True,show_skybox=False)
     
+    # # randomly add 100 new points in the current point cloud uniformly distributed in the current point cloud space
+    # new_pcd = randomly_add_points_in_point_cloud(100000,min_bound,max_bound)
+    # pcd += new_pcd
     # # save the filtered point cloud to ply file
     # # o3d.io.write_point_cloud("./result/FoV_filtered_point_cloud_example.ply", filtered_pcd, write_ascii=True)
 

@@ -288,11 +288,22 @@ def visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,
     # get the visualization of the voxel grid line set
     line_sets_all_space = line_sets_from_voxel_grid_space(graph_min_bound, graph_max_bound, voxel_size)
     
-
-
+    #get the voxelized point cloud
+    voxel_grid_hpr = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd_hpr, voxel_size, graph_min_bound, graph_max_bound) 
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud_within_bounds(pcd, voxel_size, graph_min_bound, graph_max_bound)
 
 
     # visualize the voxel grid
-    o3d.visualization.draw_geometries([pcd,pcd_hpr,*line_sets_all_space,coordinate_frame])
-    # o3d.visualization.draw_geometries([colored_pcd,*line_sets_all_space,coordinate_frame,sphere])
+    # o3d.visualization.draw_geometries([voxel_grid,*line_sets_all_space,coordinate_frame])
+    # o3d.visualization.draw_geometries([pcd,*line_sets_all_space,coordinate_frame,sphere])
+    o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([pcd_hpr])
+    o3d.visualization.draw_geometries([voxel_grid])
+    o3d.visualization.draw_geometries([voxel_grid_hpr])
+    
+
+
     # o3d.visualization.draw_geometries([voxel_grid,*line_sets_all_space,coordinate_frame,sphere])
+
+
+    # fina all file which has string visualize_voxel_grid in the file content
