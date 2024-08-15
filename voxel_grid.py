@@ -235,7 +235,7 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
 
 def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height):
     # pcd = pcd.voxel_down_sample(voxel_size=8)
-    # point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
+    point_counts_in_voxel, _ = get_number_of_points_in_voxel_grid(pcd,voxel_size,graph_min_bound,graph_max_bound)
     # get the points in the FoV
     pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
     # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=4)
@@ -246,8 +246,8 @@ def get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_
     for voxel_index in graph_voxel_grid_index_set:
         if voxel_index in point_counts_in_voxel_hpr:
             occlusion_level_dict[voxel_index] = point_counts_in_voxel_hpr[voxel_index]
-            # occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
-            occlusion_array.append(point_counts_in_voxel_hpr[voxel_index])# get the number of points in the voxel
+            occlusion_array.append(point_counts_in_voxel_hpr[voxel_index]/point_counts_in_voxel[voxel_index])
+            # occlusion_array.append(point_counts_in_voxel_hpr[voxel_index])# get the number of points in the voxel
             # if occlusion_array[-1] > 1: # this is only for ratio
                 # print('occlusion_array:',occlusion_array[-1],voxel_index)
                 # print('point_counts_in_voxel_hpr:',point_counts_in_voxel_hpr[voxel_index])
