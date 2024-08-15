@@ -10,7 +10,7 @@ import pandas as pd
 import joblib
 # build a simple MLP model
 def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(100,100),max_iter=1000,random_state=21)
+    model = MLPRegressor(hidden_layer_sizes=(100,100),max_iter=1000,random_state=21,verbose=True,early_stopping=True)
     return model
 # read data
 def read_train_data(data_index_list):
@@ -31,7 +31,17 @@ def read_test_data(data_index):
     file_name = f'{data_index}_nav.csv'
     df = pd.read_csv(file_path+file_name)
     # get the Participant 1-14 as test data
-    df = df[df['Participant'].str.contains('P[0-9]+_V1')]
+    participant = ['P'+str(user_i).zfill(2)+'_V1' for user_i in range(1, 15)]
+    df = df[df['Participant'].isin(participant)]
+    return df
+def read_validation_data(data_index):
+    file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
+    # data_index = "H4"
+    file_name = f'{data_index}_nav.csv'
+    df = pd.read_csv(file_path+file_name)
+    # get the Participant 15-27 as validation data
+    participant = ['P'+str(user_i).zfill(2)+'_V1' for user_i in range(15, 28)]
+    df = df[df['Participant'].isin(participant)]
     return df
 # get the training and testing data
 def get_train_test_data(df,window_size=10,future_steps=30):
@@ -51,6 +61,7 @@ def get_train_test_data(df,window_size=10,future_steps=30):
     return X, y
 # train the model
 def train_model(model,X_train,y_train):
+    # train the model and show loss
     model.fit(X_train,y_train)
     return model
 # evaluate the model
@@ -72,18 +83,21 @@ def main():
     # data_index = "H4"
     # df = read_data(file_path,data_index)
     # get the training and testing data
-    window_size = 30
-    future_steps = 10
+    window_size = 90
+    future_steps = 60
     train_data = read_train_data(['H1','H2','H3'])
     test_data = read_test_data('H4')
+    validation_data = read_validation_data('H4')
     X_train, y_train = get_train_test_data(train_data,window_size=window_size,future_steps=future_steps)
     X_test, y_test = get_train_test_data(test_data,window_size=window_size,future_steps=future_steps)
+    X_val, y_val = get_train_test_data(validation_data,window_size=window_size,future_steps=future_steps)
     X_train = X_train.reshape((X_train.shape[0], -1))
     X_test = X_test.reshape((X_test.shape[0], -1))
+    print(X_train.shape)
 
     # build the model
     model = build_mlp_model()
-    # train the model
+    # train the model with validation data and early stopping
     model = train_model(model,X_train,y_train)
     # evaluate the model
     mse = evaluate_model(model,X_test,y_test)
