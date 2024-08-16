@@ -6,7 +6,7 @@ import joblib
 
 # Function to build a simple MLP model
 def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(100, 100), max_iter=1000, random_state=21, verbose=True, early_stopping=True)
+    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=True, early_stopping=True)
     return model
 
 # Function to read training data
@@ -103,9 +103,9 @@ def load_model(model_file):
     return model
 
 # Main function
-def main():
+def main(future_steps):
     window_size = 90
-    future_steps = 10
+    # future_steps = 30
     train_data = read_train_data(['H1', 'H2', 'H3'])
     test_data = read_test_data('H4')
     validation_data = read_validation_data('H4')
@@ -134,4 +134,6 @@ def main():
     test_data_pred.to_csv(pred_file_path + pred_file_name, index=False)
 
 if __name__ == '__main__':
-    main()
+    for future_steps in [10, 30, 60, 90, 150]:
+        main(future_steps)
+    # main()

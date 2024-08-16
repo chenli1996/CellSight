@@ -104,7 +104,8 @@ def generate_node_feature():
         # prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
         prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}'
-        for future in [60]:
+        # for future in [30]:
+        for future in [10,30,60,150]:
             # print(f'Processing {pcd_name} with history {history} and future {future}...')
             for user_i in tqdm(range(1,15)):  # TLP/LR/MLP is 15 for testing***********************************************
             # for user_i in tqdm(range(1,28)):                

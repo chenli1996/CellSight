@@ -229,7 +229,7 @@ def predict_next_state_tlp_rad(user_data, window_size=2,dof=6,future_steps = 1):
 
 def linear_regression_baseline():
     # read ground truth data
-    window_size_lr = 30
+    window_size_lr = 90
     # future_steps =150
     file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     data_index = "H4"
@@ -343,7 +343,8 @@ def truncated_linear_regression_baseline():
 
 if __name__ == '__main__':
     # linear_regression()
-    truncated_linear_regression_baseline()
+    linear_regression_baseline()
+    # truncated_linear_regression_baseline()
     # Example usage
     # history_sequence = -np.array([3, 5, 7, 8, 10, 2, 3, 4, 5, 6])
     # future_steps = 3
