@@ -102,12 +102,13 @@ def generate_node_feature():
         # future = 60
         # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
-        prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
+        # prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
+        prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}'
-        # for future in [30]:
-        for future in [10,30,60,150]:
+        # for future in [60]:
+        for future in [10,30,150]:
             # print(f'Processing {pcd_name} with history {history} and future {future}...')
-            for user_i in tqdm(range(1,15)):  # TLP/LR/MLP is 15 for testing***********************************************
+            for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
             # for user_i in tqdm(range(1,28)):                
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 node_index = []
@@ -121,6 +122,7 @@ def generate_node_feature():
                 # positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future) # LR is _LR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
                 positions,orientations = get_point_cloud_user_trajectory_MLP(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
+                positions,orientations = get_point_cloud_user_trajectory_LSTM(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
 
                 for trajectory_index in tqdm(range((len(positions)))):
                     # print(f'Processing trajectory {trajectory_index}...')

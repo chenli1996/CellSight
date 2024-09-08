@@ -1,19 +1,29 @@
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader, TensorDataset
 
-# Function to build an LSTM model
-def build_lstm_model(input_shape):
-    model = Sequential()
-    model.add(LSTM(100, return_sequences=True, input_shape=input_shape))
-    model.add(LSTM(100))
-    model.add(Dense(9))  # 3 for X, Y, Z and 6 for sin_cos (yaw, pitch, roll)
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    return model
+# LSTM Model Definition
+class LSTMModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=2):
+        super(LSTMModel, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        h_0 = torch.zeros(2, x.size(0), 100).to(x.device)  # Hidden state
+        c_0 = torch.zeros(2, x.size(0), 100).to(x.device)  # Cell state
+        
+        # Propagate input through LSTM
+        out, _ = self.lstm(x, (h_0, c_0))
+        
+        # Decode hidden state of last time step
+        out = self.fc(out[:, -1, :])
+        return out
 
 # Function to read training data
 def read_train_data(data_index_list):
@@ -86,23 +96,58 @@ def get_train_test_data(df, window_size=10, future_steps=30):
     return X, y.reshape(y.shape[0], -1)  # Flatten y to be 2D
 
 # Function to train the model
-def train_model(model, X_train, y_train, X_val, y_val):
-    history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_val, y_val), verbose=2)
-    return model, history
+def train_model(model, train_loader, val_loader, num_epochs=50, learning_rate=0.001):
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+    for epoch in range(num_epochs):
+        model.train()
+        for X_batch, y_batch in train_loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+            optimizer.zero_grad()
+            outputs = model(X_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+        
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for X_val, y_val in val_loader:
+                X_val, y_val = X_val.to(device), y_val.to(device)
+                val_outputs = model(X_val)
+                val_loss += criterion(val_outputs, y_val).item()
+        
+        val_loss /= len(val_loader)
+        print(f'Epoch [{epoch+1}/{num_epochs}], Validation Loss: {val_loss:.4f}')
+
+    return model
 
 # Function to evaluate the model
-def evaluate_model(model, X_test, y_test):
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    return mse
+def evaluate_model(model, test_loader):
+    model.eval()
+    y_true = []
+    y_pred = []
+    with torch.no_grad():
+        for X_batch, y_batch in test_loader:
+            X_batch = X_batch.to(device)
+            outputs = model(X_batch)
+            y_pred.append(outputs.cpu().numpy())
+            y_true.append(y_batch.numpy())
+    
+    y_pred = np.concatenate(y_pred, axis=0)
+    y_true = np.concatenate(y_true, axis=0)
+    mse = mean_squared_error(y_true, y_pred)
+    return mse, y_pred
 
 # Function to save the model
 def save_model(model, model_file):
-    model.save(model_file)
+    torch.save(model.state_dict(), model_file)
 
 # Function to load the model
-def load_model(model_file):
-    model = tf.keras.models.load_model(model_file)
+def load_model(model, model_file, input_size, hidden_size, output_size, num_layers=2):
+    model = LSTMModel(input_size, hidden_size, output_size, num_layers)
+    model.load_state_dict(torch.load(model_file))
     return model
 
 # Main function
@@ -117,14 +162,26 @@ def main():
     X_val, y_val = get_train_test_data(validation_data, window_size=window_size, future_steps=future_steps)
     X_test, y_test = get_train_test_data(test_data, window_size=window_size, future_steps=future_steps)
 
-    model = build_lstm_model(input_shape=(X_train.shape[1], X_train.shape[2]))
-
-    model, history = train_model(model, X_train, y_train, X_val, y_val)
+    # Convert data to PyTorch tensors
+    train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
+    val_dataset = TensorDataset(torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.float32))
+    test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
     
-    mse = evaluate_model(model, X_test, y_test)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+    input_size = X_train.shape[2]
+    hidden_size = 100
+    output_size = y_train.shape[1]
+
+    model = LSTMModel(input_size, hidden_size, output_size).to(device)
+
+    model = train_model(model, train_loader, val_loader)
+    
+    mse, y_pred = evaluate_model(model, test_loader)
     print(f'Mean Squared Error: {mse}')
     
-    y_pred = model.predict(X_test)
     y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
 
     test_data_pred = test_data.copy()
@@ -135,4 +192,5 @@ def main():
     test_data_pred.to_csv(pred_file_path + pred_file_name, index=False)
 
 if __name__ == '__main__':
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     main()

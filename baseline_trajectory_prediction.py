@@ -344,7 +344,7 @@ def truncated_linear_regression_baseline():
 if __name__ == '__main__':
     # linear_regression()
     linear_regression_baseline()
-    # truncated_linear_regression_baseline()
+    truncated_linear_regression_baseline()
     # Example usage
     # history_sequence = -np.array([3, 5, 7, 8, 10, 2, 3, 4, 5, 6])
     # future_steps = 3
