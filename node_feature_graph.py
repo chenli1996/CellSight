@@ -121,7 +121,7 @@ def generate_node_feature():
                 # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
                 # positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future) # LR is _LR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
-                positions,orientations = get_point_cloud_user_trajectory_MLP(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
+                # positions,orientations = get_point_cloud_user_trajectory_MLP(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
                 positions,orientations = get_point_cloud_user_trajectory_LSTM(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
 
                 for trajectory_index in tqdm(range((len(positions)))):

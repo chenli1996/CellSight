@@ -289,7 +289,7 @@ class GraphGRU(nn.Module):
         self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
 
         self.head = 1
-        self.multiGAT = True
+        self.multiGAT = False
         self.dropout = 0.2
         self.OriginalGAT = False
         self.num_units = hidden_size
