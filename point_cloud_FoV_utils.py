@@ -296,6 +296,23 @@ def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
         point_cloud_path = f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply'
         pcd = o3d.io.read_point_cloud(point_cloud_path)
     return pcd
+
+def get_pcd_data_binary(point_cloud_name='longdress', trajectory_index=0):
+    # downsample and remove hidden points
+    # 
+    if point_cloud_name == 'longdress':
+        point_cloud_path = f'./data/binary_original/{point_cloud_name}/frame{trajectory_index}_binary.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'loot':
+        point_cloud_path = f'./data/binary_original/{point_cloud_name}/frame{trajectory_index}_binary.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'redandblack':
+        point_cloud_path = f'./data/binary_original/{point_cloud_name}/frame{trajectory_index}_binary.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    elif point_cloud_name == 'soldier':
+        point_cloud_path = f'./data/binary_original/{point_cloud_name}/frame{trajectory_index}_binary.ply'
+        pcd = o3d.io.read_point_cloud(point_cloud_path)
+    return pcd
     
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
