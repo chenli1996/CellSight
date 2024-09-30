@@ -18,7 +18,7 @@ torch.set_default_dtype(torch.float32)
 def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # train_start = 1
-    # train_end = 5
+    # train_end = 
     # test_start = 21
     # test_end = 26 -3
     # val_start = 27
