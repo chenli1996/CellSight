@@ -194,7 +194,7 @@ def generate_node_feature():
 
 
 if __name__ == '__main__':
-    # generate_graph(voxel_size=64) #run once to generate the graph edges and save to the csv file befere running the generate_node_feature()
+    # generate_graph(voxel_size=64) 
     generate_node_feature()
     # downsample_binary_pcd_data()
 
