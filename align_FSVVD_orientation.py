@@ -8,7 +8,7 @@ ub_file_name = 'HKY_chatting_resampled.txt'
 # ub_file_name = 'RenZhichen_chatting_resampled.txt'
 # ub_file_name = 'GuoYushan_chatting_resampled.txt'
 # ub_file_name = 'liuxuya_chatting_resampled.txt'
-ub_file_name = 'LHJ_chatting_resampled.txt'
+# ub_file_name = 'LHJ_chatting_resampled.txt'
 # ub_file_name = 'ChenYongting_chatting_resampled.txt'
 resampled_user_behavior_file_path = '../point_cloud_data/processed_FSVVD/Resample_UB/Chatting/'
 FSVVD_file_path = '../point_cloud_data/processed_FSVVD/FSVVD_300/Chatting/Raw/'
@@ -38,4 +38,4 @@ for frame in range(0,len(ub_df)):
     save_rendering_from_given_FoV_traces_fsvvd(pcd,selected_position,selected_orientation,frame,
                                                save=True,render_flag=False,
                                                save_path=FSVVD_ub_video_path+ub_file_name.split('.')[0]+'/',
-                                               save_filename=str(frame).zfill(3)+'.png')
+                                               save_filename=str(frame).zfill(4)+'.png')
