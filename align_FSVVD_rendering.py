@@ -4,14 +4,19 @@ import open3d as o3d
 import os
 from point_cloud_FoV_utils import *
 import gc
-ub_file_name = 'HKY_chatting_resampled.txt'
+
+
+video_name = 'Chatting'
+user_name = 'ChenYongting'
+
+ub_file_name = f'{user_name}_{video_name}_resampled.txt'
 # ub_file_name = 'RenZhichen_chatting_resampled.txt'
 # ub_file_name = 'GuoYushan_chatting_resampled.txt'
 # ub_file_name = 'liuxuya_chatting_resampled.txt'
 # ub_file_name = 'LHJ_chatting_resampled.txt'
 # ub_file_name = 'ChenYongting_chatting_resampled.txt'
-resampled_user_behavior_file_path = '../point_cloud_data/processed_FSVVD/Resample_UB/Chatting/'
-FSVVD_file_path = '../point_cloud_data/processed_FSVVD/FSVVD_300/Chatting/Raw/'
+resampled_user_behavior_file_path = f'../point_cloud_data/processed_FSVVD/Resample_UB/{video_name}/'
+FSVVD_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
 ub_df = pd.read_csv(resampled_user_behavior_file_path + ub_file_name, delim_whitespace=True)
 FSVVD_ub_video_path = '../point_cloud_data/processed_FSVVD/ub_video/'
 # ub_df

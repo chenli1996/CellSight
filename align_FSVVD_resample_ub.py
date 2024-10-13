@@ -1,4 +1,5 @@
 import os
+from unittest import skip
 import open3d as o3d
 import numpy as np
 import pandas as pd
@@ -6,10 +7,10 @@ from FSVVD_data_utils import *
 from tqdm import tqdm
 
 
-video_name = 'chatting'
+video_name = 'Chatting'
 user_behavior_file_path = '../point_cloud_data/FSVVD/ACM_MM23 User Behavior Dataset with Tools/User Movement/'
 files = os.listdir(user_behavior_file_path)
-files_chatting = [file for file in files if video_name in file]
+files_chatting = [file for file in files if video_name.lower() in file.lower()]
 # files_chatting
 
 ## read user behavior trajectory
@@ -23,7 +24,8 @@ for file in tqdm(files_chatting):
         column_names = first_line.split(', ')
     
     # Read the rest of the file using tabs as delimiters
-    df_full = pd.read_csv(file_path, delim_whitespace=True, skiprows=1, header=None)
+    # df_full = pd.read_csv(file_path, delim_whitespace=True, skiprows=1, header=None)
+    df_full = pd.read_csv(file_path, sep='\s+', skiprows=1, header=None)
     
     # Set the column names
     df_full.columns = column_names
@@ -62,9 +64,15 @@ for file in tqdm(files_chatting):
 
 
     # save resampled_df to file
-    resampled_user_behavior_file_path = '../point_cloud_data/processed_FSVVD/Resample_UB/Chatting/'
+    resampled_user_behavior_file_path = f'../point_cloud_data/processed_FSVVD/Resample_UB/{video_name}/'
     if not os.path.exists(os.path.dirname(resampled_user_behavior_file_path)):
         os.makedirs(os.path.dirname(resampled_user_behavior_file_path))
     resampled_file_name = file.replace('.txt', '_resampled.txt')
+    # resampled_file_name is like 'GuoYushan_chatting_resampled.txt', change the file name to 'GuoYushan_Chatting_resampled.txt' using split and capitalize
+    current_video_name = resampled_file_name.split('_')[1]
+    resampled_file_name = resampled_file_name.replace(current_video_name, current_video_name.capitalize())
+    # import pdb; pdb.set_trace()
+    print(resampled_file_name)
+
     resampled_df.to_csv(resampled_user_behavior_file_path + resampled_file_name, index=False, sep=' ')
     # break
