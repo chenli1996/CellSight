@@ -6,6 +6,8 @@ import pandas as pd
 from FSVVD_data_utils import *
 from tqdm import tqdm
 
+# given video name, read user behavior trajectory, resample to 60Hz, convert to sin cos, save to file
+# input is the video name, output is the resampled user behavior trajectory file
 
 video_name = 'Chatting'
 user_behavior_file_path = '../point_cloud_data/FSVVD/ACM_MM23 User Behavior Dataset with Tools/User Movement/'

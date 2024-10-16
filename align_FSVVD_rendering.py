@@ -4,7 +4,15 @@ import open3d as o3d
 import os
 from point_cloud_FoV_utils import *
 import gc
+# fix alpha data error(remove alpha data)
+# one a headless environment by enabling offscreen rendering and setting up a virtual display:
 
+# Xvfb :1 -screen 0 800x600x24 &
+# export DISPLAY=:1
+
+
+# given video name, user name, read resampled user behavior trajectory, read FSVVD, render from given FoV, save to file
+# input is the video name, user name, output is the rendered video
 
 video_name = 'Chatting'
 user_name = 'ChenYongting'
