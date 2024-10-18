@@ -376,7 +376,8 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
     if save:
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        vis.capture_screen_image(save_path + save_filename, do_render=True)
+        vis.capture_screen_image(save_path + save_filename, do_render=True)# set do_render=True to render the image on virtual display
+        # vis.capture_screen_image(save_path + save_filename, do_render=False)# set do_render=False on your local computer with display
         # pass
     # check path exist or not, if not create it
 
