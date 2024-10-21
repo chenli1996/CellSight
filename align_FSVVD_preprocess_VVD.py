@@ -1,3 +1,4 @@
+# from Open3D.examples.python.visualization import video
 import numpy as np
 import open3d as o3d
 import os
@@ -139,8 +140,11 @@ def preprocess_VVD(video_name):
 if __name__ == '__main__':
     # ['Chatting', 'Pulling_trolley']
     # for video_name in ['Pulling_trolley']:
-    for video_name in ['Cleaning_whiteboard']:
-        print(f'Processing {video_name}...')
-        preprocess_VVD(video_name)
+    # for video_name in ['Cleaning_whiteboard']:
+    video_name = 'Sweep'
+    video_name = 'Presenting'
+    video_name = 'News_interviewing'
+    print(f'Processing {video_name}...')
+    preprocess_VVD(video_name)
 
 

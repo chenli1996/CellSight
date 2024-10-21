@@ -12,6 +12,9 @@ from tqdm import tqdm
 # video_name = 'Chatting'
 video_name = 'Pulling_trolley'
 video_name = 'Cleaning_whiteboard'
+video_name = 'Sweep'
+video_name = 'Presenting'
+video_name = 'News_interviewing'
 
 user_behavior_file_path = '../point_cloud_data/FSVVD/ACM_MM23 User Behavior Dataset with Tools/User Movement/'
 files = os.listdir(user_behavior_file_path)

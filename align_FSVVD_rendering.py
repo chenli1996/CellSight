@@ -61,13 +61,18 @@ if __name__ == '__main__':
     video_name = 'Chatting'
     video_name = 'Pulling_trolley'
     video_name = 'Cleaning_whiteboard'
+    video_name = 'News_interviewing'
+    # video_name = 'Presenting'
+    video_name = 'Sweep'
     # user_name = 'HKY'
     # full_user_list_chatting = ['HKY','LHJ','Guozhaonian','RenHongyu','Sunqiran','sulehan','LiaoJunjian','LHJ','TuYuzhao','yuchen','FengXuanqi','fupingyu','RenZhichen','WangYan','huangrenyi','ChenYongting','GuoYushan','liuxuya']
     Pulling_trolley_user =      ['TuYuzhao', 'Guozhaonian', 'fupingyu', 'FengXuanqi', 'WangYan', 'Sunqiran', 'LHJ', 'GuoYushan', 'ChenYongting', 'huangrenyi', 'sulehan', 'liuxuya', 'yuchen', 'LiaoJunjian', 'RenHongyu', 'RenZhichen', 'HKY']
     Cleaning_whiteboard_user =   ['RenHongyu', 'liuxuya', 'sulehan', 'GuoYushan', 'LHJ', 'RenZhichen', 'Guozhaonian', 'Sunqiran', 'fupingyu', 'yuchen', 'huangrenyi',  'WangYan', 'ChenYongting','HKY']
-    
+    Sweep_user = ['sulehan', 'LHJ', 'TuYuzhao', 'Sunqiran', 'yuchen', 'FengXuanqi', 'WangYan', 'huangrenyi', 'ChenYongting', 'LiaoJunjian', 'liuxuya', 'RenZhichen', 'Renhongyu', 'Guozhaonian', 'fupingyu', 'GuoYushan','HKY']
+    Presenting_user = ['HKY', 'fupingyu', 'sulehan', 'yuchen', 'ChenYongting', 'WangYan', 'Sunqiran', 'GuoYushan', 'RenZhichen', 'liuxuya', 'huangrenyi', 'Guozhaonian']
+    News_interviewing_user = ['HKY', 'Guozhaonian', 'liuxuya', 'fupingyu', 'RenHongyu', 'sulehan', 'RenZhichen', 'huangrenyi', 'LiaoJunjian', 'GuoYushan', 'Sunqiran', 'ChenYongting', 'yuchen', 'WangYan']
     # for user_name in ['HKY']:
-    for user_name in Cleaning_whiteboard_user:
+    for user_name in Sweep_user:
         print(f'video_name:{video_name},user_name:{user_name}')
         save_fov_images_from_user_behaviror(video_name,user_name)
         gc.collect()
