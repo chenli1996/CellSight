@@ -8,8 +8,10 @@ import gc
 # fix alpha data error(remove alpha data)
 # one a headless environment by enabling offscreen rendering and setting up a virtual display:
 
-# Xvfb :99 -screen 0 800x600x24 &
+# Xvfb :99 -screen 0 800x600x24 & export DISPLAY=:99
 # export DISPLAY=:99
+
+# Xvfb :100 -screen 0 1920x1080x24 & export DISPLAY=:100
 
 
 # given video name, user name, read resampled user behavior trajectory, read FSVVD, render from given FoV, save to file
@@ -57,9 +59,15 @@ def save_fov_images_from_user_behaviror(video_name,user_name):
 # 
 if __name__ == '__main__':
     video_name = 'Chatting'
+    video_name = 'Pulling_trolley'
+    video_name = 'Cleaning_whiteboard'
     # user_name = 'HKY'
-    # full_user_list = ['HKY','LHJ','Guozhaonian','RenHongyu','Sunqiran','sulehan','LiaoJunjian','LHJ','TuYuzhao','yuchen','FengXuanqi','fupingyu','RenZhichen','WangYan','huangrenyi','ChenYongting','GuoYushan','liuxuya']
-    for user_name in ['WangYan','huangrenyi','ChenYongting','GuoYushan','liuxuya','yuchen']:
+    # full_user_list_chatting = ['HKY','LHJ','Guozhaonian','RenHongyu','Sunqiran','sulehan','LiaoJunjian','LHJ','TuYuzhao','yuchen','FengXuanqi','fupingyu','RenZhichen','WangYan','huangrenyi','ChenYongting','GuoYushan','liuxuya']
+    Pulling_trolley_user =      ['TuYuzhao', 'Guozhaonian', 'fupingyu', 'FengXuanqi', 'WangYan', 'Sunqiran', 'LHJ', 'GuoYushan', 'ChenYongting', 'huangrenyi', 'sulehan', 'liuxuya', 'yuchen', 'LiaoJunjian', 'RenHongyu', 'RenZhichen', 'HKY']
+    Cleaning_whiteboard_user =   ['RenHongyu', 'liuxuya', 'sulehan', 'GuoYushan', 'LHJ', 'RenZhichen', 'Guozhaonian', 'Sunqiran', 'fupingyu', 'yuchen', 'huangrenyi',  'WangYan', 'ChenYongting','HKY']
+    
+    # for user_name in ['HKY']:
+    for user_name in Cleaning_whiteboard_user:
         print(f'video_name:{video_name},user_name:{user_name}')
         save_fov_images_from_user_behaviror(video_name,user_name)
         gc.collect()

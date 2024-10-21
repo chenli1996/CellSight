@@ -334,6 +334,7 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
 
     # print(selected_position)
     # print(selected_orientation)
+    # image_width, image_height = np.array([800,600])
     image_width, image_height = np.array([1920, 1080])
     intrinsic_matrix = get_camera_intrinsic_matrix_fsvvd(image_width, image_height)
     # Define camera extrinsic parameters (example values for rotation and translation)

@@ -28,5 +28,5 @@ def binary_pcd_data():
 
 
 if __name__ == "__main__":
-    # downsample_binary_pcd_data()
+    downsample_binary_pcd_data()
     binary_pcd_data()

@@ -2,6 +2,7 @@ import numpy as np
 import open3d as o3d
 import os
 import pandas as pd
+from tqdm import tqdm
 from FSVVD_data_utils import resample_dataframe, visualize_comparison, convert_orientation_to_sin_cos,convert_sin_cos_to_orientation
 # read FSVVD and preprocess to 300 frames
 
@@ -60,7 +61,7 @@ def fix_ply_alpha(file_path, file_name, fixed_file_path):
         file.write("\n".join(fixed_data))
         file.write("\n")  # Optional: Add a newline at the end of the file
 
-    print(f"Fixed .ply file saved as {output_full_path}")
+    # print(f"Fixed .ply file saved as {output_full_path}")
     return output_full_path
 
 # Example Usage
@@ -73,55 +74,73 @@ def fix_ply_alpha(file_path, file_name, fixed_file_path):
 
 
 
-video_name = 'Chatting'
+# video_name = 'Chatting'
+def preprocess_VVD(video_name):
+    raw_file_path = f'../point_cloud_data/FSVVD/{video_name}/Raw/'
+    # raw_file_path = '../point_cloud_data/FSVVD/Pulling_trolley/Raw/'
+    fixed_file_path = f'../point_cloud_data/processed_FSVVD/fixed_alpha/{video_name}/Raw/'
+    if not os.path.exists(fixed_file_path):
+        os.makedirs(fixed_file_path)
 
-raw_file_path = f'../point_cloud_data/FSVVD/{video_name}/Raw/'
-# raw_file_path = '../point_cloud_data/FSVVD/Pulling_trolley/Raw/'
-fixed_file_path = f'../point_cloud_data/processed_FSVVD/fixed_alpha/{video_name}/Raw/'
-if not os.path.exists(fixed_file_path):
-    os.makedirs(fixed_file_path)
+    # get all files in the directory raw_file_path
 
-# get all files in the directory raw_file_path
+    files = os.listdir(raw_file_path)
+    # for file in files:
+    #     if file.endswith('.ply'):
+    #         # only process file with name '_number_' and number is less than 300
+    #         if int(file.split('_')[-2]) >= 300: # do not process file with number >= 300
+    #         # if int(file.split('_')[-2]) >= 1: # do not process file with number >= 300
+    #             continue
+    #         fixed_file = fix_ply_alpha(raw_file_path, file, fixed_file_path)
+    #         # Load the fixed .ply file
+    #         pcd = o3d.io.read_point_cloud(fixed_file)
+    # 
+    # Filter the files you want to process
+    valid_files = [
+        file for file in files
+        if file.endswith('.ply') and int(file.split('_')[-2]) < 300
+    ]
 
-files = os.listdir(raw_file_path)
-for file in files:
-    if file.endswith('.ply'):
-        # only process file with name '_number_' and number is less than 300
-        if int(file.split('_')[-2]) >= 300: # do not process file with number >= 300
-        # if int(file.split('_')[-2]) >= 1: # do not process file with number >= 300
-            continue
+    # Iterate over the filtered files with tqdm
+    for file in tqdm(valid_files, desc="Processing files-fix alpha"):
         fixed_file = fix_ply_alpha(raw_file_path, file, fixed_file_path)
         # Load the fixed .ply file
         pcd = o3d.io.read_point_cloud(fixed_file)
 
+            # Visualize the point cloud
+            # o3d.visualization.draw_geometries([pcd])
+
+
+    # read FSVVD and preprocess to 300 frames to binary ply
+
+    input_file_path = fixed_file_path
+    # input_file_path  = '../point_cloud_data/FSVVD/Chatting/Raw/'
+    output_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
+    # read all ply files from input_file_path and save to output_file_path with write_ascii=False using open3d
+    files = os.listdir(input_file_path)
+    # remove .DS_Store file if any
+    files = [file for file in files if file != '.DS_Store']
+    files.sort(key=lambda x: int(x.split('_')[-3]))
+    # files
+
+    if not os.path.exists(os.path.dirname(output_file_path)):
+        os.makedirs(os.path.dirname(output_file_path))
+
+    for frame_index in tqdm(range(0,300), desc="Processing files-convert to binary ply"):
+        # frame_index = 29
+        selected_file = files[frame_index%len(files)]
+        # print(selected_file)
+        pcd = o3d.io.read_point_cloud(input_file_path+selected_file)
         # Visualize the point cloud
         # o3d.visualization.draw_geometries([pcd])
+        
+        o3d.io.write_point_cloud(f'{output_file_path}{frame_index}_binary.ply', pcd, write_ascii=False)
         # w
-
-# read FSVVD and preprocess to 300 frames to binary ply
-
-input_file_path = fixed_file_path
-# input_file_path  = '../point_cloud_data/FSVVD/Chatting/Raw/'
-output_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
-# read all ply files from input_file_path and save to output_file_path with write_ascii=False using open3d
-files = os.listdir(input_file_path)
-# remove .DS_Store file if any
-files = [file for file in files if file != '.DS_Store']
-files.sort(key=lambda x: int(x.split('_')[-3]))
-# files
-
-if not os.path.exists(os.path.dirname(output_file_path)):
-    os.makedirs(os.path.dirname(output_file_path))
-
-for frame_index in range(0,300):
-    # frame_index = 29
-    selected_file = files[frame_index%len(files)]
-    # print(selected_file)
-    pcd = o3d.io.read_point_cloud(input_file_path+selected_file)
-    # Visualize the point cloud
-    # o3d.visualization.draw_geometries([pcd])
-    
-    o3d.io.write_point_cloud(f'{output_file_path}{frame_index}_binary.ply', pcd, write_ascii=False)
-    # w
+if __name__ == '__main__':
+    # ['Chatting', 'Pulling_trolley']
+    # for video_name in ['Pulling_trolley']:
+    for video_name in ['Cleaning_whiteboard']:
+        print(f'Processing {video_name}...')
+        preprocess_VVD(video_name)
 
 

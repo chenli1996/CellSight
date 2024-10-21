@@ -1,29 +1,27 @@
+from re import T
 import numpy as np
 import open3d as o3d
 from node_feature_utils import parse_trajectory_data
 import os
 from itertools import chain
 from point_cloud_FoV_utils import *
+from tqdm import tqdm
 
 def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orientations,
                                 trajectory_index,point_cloud_name='longdress',user='P03_V1',prefix='',save=False,render_flag=False):    
     # pcd = get_pcd_data(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index%150)
     # pcd = get_pcd_data_binary(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index%150)
-    point_cloud_path = f'../point_cloud_data/tongyu/frame0_binary.ply'    
-    pcd_ty = o3d.io.read_point_cloud(point_cloud_path)
+    # point_cloud_path = f'../point_cloud_data/tongyu/frame0_binary.ply'    
+    # pcd_ty = o3d.io.read_point_cloud(point_cloud_path)
     # pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,149]))#longdress
 
-    point_cloud_path = f'../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
-    pcd = o3d.io.read_point_cloud(point_cloud_path)
-    # pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,149]))#longdress
+    # point_cloud_path = f'../point_cloud_data/8i/longdress/longdress/Ply/longdress_vox10_'+str(1051+trajectory_index%150)+'.ply'
+    # pcd = o3d.io.read_point_cloud(point_cloud_path)
 
-    
-    # check pcd_my and pcd, whether they are the same
-    print(np.array(pcd.points).shape)
-    print(np.array(pcd_ty.points).shape)
-    print(np.array(pcd.points))
-    print(np.array(pcd_ty.points))
-    # pcd = 
+    pcd = get_pcd_data_original(point_cloud_name=point_cloud_name, trajectory_index=trajectory_index%150)
+    # pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index%150)
+
+    # pcd.points = o3d.utility.Vector3dVector(np.array(pcd.points) - np.array([246,0,149]))#longdress
     # get XYZ data
     selected_position = trajectory_positions[trajectory_index]
     # para_eye = [i*1024/1.8 for i in selected_position]
@@ -45,7 +43,7 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
         pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
         # pcd = downsampele_hidden_point_removal(pcd,para_eye,voxel_size=8)
         pcd = hidden_point_removal(pcd,para_eye)
-        
+        # pcd = hidden_point_removal(pcd,[100,300,500])
 
 
     # Setting up the visualizer
@@ -75,9 +73,10 @@ def save_rendering_from_given_FoV_traces(trajectory_positions,trajectory_orienta
     # w
     if save:
     # check path exist or not, if not create it
-        if not os.path.exists('../result/'+point_cloud_name+'/'+user):
-            os.makedirs('../result/'+point_cloud_name+'/'+user)        
-        vis.capture_screen_image('../result/'+point_cloud_name+'/'+user+'/'+prefix+'fov_'+str(trajectory_index).zfill(3)+'.png', do_render=False) 
+        output_file_path = './data/8i_user_videos/'+point_cloud_name+'/'+user+'/'
+        if not os.path.exists(output_file_path):
+            os.makedirs(output_file_path)      
+        vis.capture_screen_image(output_file_path+prefix+'fov_'+str(trajectory_index).zfill(3)+'.png', do_render=True) 
     # index should have 3 digits
     vis.destroy_window()
 
@@ -88,11 +87,11 @@ participant='P01_V1'
 positions,orientations = get_point_cloud_user_trajectory(pcd_name='longdress',participant=participant)
 end_index = len(positions)
 print('end_index:',end_index)
-end_index = 1
-for index in range(0, end_index,1):
+# end_index = 1
+for index in tqdm(range(0, end_index,1)):
     print('index:',index)
     save_rendering_from_given_FoV_traces(positions,orientations,
-                            trajectory_index=index,point_cloud_name=pcd_name,user=participant,render_flag=True,
-                            # prefix='visible_points'
+                            trajectory_index=index,point_cloud_name=pcd_name,user=participant,render_flag=False,save=True,
+                            prefix='visible_points'
                             )
        
