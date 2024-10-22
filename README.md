@@ -58,3 +58,12 @@ Renders and saves users' FoV images.
 - Saves FoV images for each user for further processing or visualization.
 
 **Note**: Requires setting up a virtual display using Xvfb.
+
+### preprocess.py
+
+Preprocess 8i data, save to binary file, downsammple for hpr
+
+
+### rendering_pc.py
+
+render 8i data using fov and save to png figures. It can also be used to visualize the ply files using fov.

@@ -36,7 +36,7 @@ def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
 def generate_graph(voxel_size=128):   
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
-    voxel_size = int(64)
+    # voxel_size = int(64)
     min_bounds = np.array([-251,    0, -241]) 
     max_bounds = np.array([ 262, 1023,  511])
     
@@ -109,8 +109,8 @@ def generate_node_feature():
         for future in [10,30,60,150]:
             print(f'Processing {pcd_name} with history {history} and future {future}...')
             # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
-            # for user_i in tqdm(range(1,28)):                
-            for user_i in tqdm(range(1,2)):                
+            for user_i in tqdm(range(1,28)):                
+            # for user_i in tqdm(range(1,2)):                
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 node_index = []
                 occupancy_feature = []
@@ -197,7 +197,7 @@ def generate_node_feature():
 
 
 if __name__ == '__main__':
-    # generate_graph(voxel_size=64) 
+    # generate_graph(voxel_size=128) # run once to generate graph edges
     generate_node_feature()
     # downsample_binary_pcd_data()
 

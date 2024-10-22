@@ -87,11 +87,11 @@ participant='P01_V1'
 positions,orientations = get_point_cloud_user_trajectory(pcd_name='longdress',participant=participant)
 end_index = len(positions)
 print('end_index:',end_index)
-end_index = 1
+# end_index = 1
 for index in tqdm(range(0, end_index,1)):
     print('index:',index)
     save_rendering_from_given_FoV_traces(positions,orientations,
                             trajectory_index=index,point_cloud_name=pcd_name,user=participant,render_flag=False,save=True,
-                            prefix='visible_points'
+                            # prefix='visible_points',
                             )
        
