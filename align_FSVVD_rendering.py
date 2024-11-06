@@ -1,4 +1,4 @@
-from ast import main
+# from ast import main
 import pandas as pd
 from FSVVD_data_utils import *
 import open3d as o3d
@@ -31,7 +31,7 @@ def save_fov_images_from_user_behaviror(video_name,user_name):
     ub_df = pd.read_csv(resampled_user_behavior_file_path + ub_file_name, delim_whitespace=True)
     FSVVD_ub_video_path = '../point_cloud_data/processed_FSVVD/ub_video/'
     # ub_df
-    render_flag = False
+    render_flag = True
     save = True
     image_width, image_height = np.array([1920, 1080])
     print('total frames',len(ub_df))
@@ -59,7 +59,7 @@ def save_fov_images_from_user_behaviror(video_name,user_name):
 # 
 if __name__ == '__main__':
     video_name = 'Chatting'
-    video_name = 'Pulling_trolley'
+    # video_name = 'Pulling_trolley'
     # video_name = 'Cleaning_whiteboard'
     # video_name = 'News_interviewing'
     # video_name = 'Presenting'
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     Presenting_user =           ['HKY', 'fupingyu', 'sulehan', 'yuchen', 'ChenYongting', 'WangYan', 'Sunqiran', 'GuoYushan', 'RenZhichen', 'liuxuya', 'huangrenyi', 'Guozhaonian']
     News_interviewing_user =    ['HKY', 'Guozhaonian', 'liuxuya', 'fupingyu', 'RenHongyu', 'sulehan', 'RenZhichen', 'huangrenyi', 'LiaoJunjian', 'GuoYushan', 'Sunqiran', 'ChenYongting', 'yuchen', 'WangYan']
     # for user_name in ['HKY']:
-    for user_name in Pulling_trolley_user:
+    for user_name in Chatting_user:
         print(f'video_name:{video_name},user_name:{user_name}')
         save_fov_images_from_user_behaviror(video_name,user_name)
         gc.collect()

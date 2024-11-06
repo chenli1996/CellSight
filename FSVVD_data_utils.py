@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import open3d as o3d
 import os
+from point_cloud_FoV_utils import *
 
 
 def resample_dataframe(df, freq_hz):
@@ -303,6 +304,7 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
     # print(ub_row)
 
 
+
     # print(selected_position)
     # print(selected_orientation)
     # image_width, image_height = np.array([800,600])
@@ -318,8 +320,13 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0,0,0])
     # o3d.visualization.draw([pcd,coordinate_frame],
     #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
-    #                        raw_mode=True,show_skybox=False)         
-
+    #                        raw_mode=True,show_skybox=False)        
+    # print('total points:',len(pcd.points)) 
+    # pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
+    # print('points in FoV:',len(pcd.points))
+    # pcd = hidden_point_removal_fsvvd(pcd,para_eye)
+    # print('points after hidden point removal:',len(pcd.points))
+    # import pdb; pdb.set_trace()
     # Setting up the visualizer
     vis = o3d.visualization.Visualizer()
     # vis.create_window(width=image_width, height=image_height)
@@ -327,6 +334,10 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
     
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=para_eye)
     vis.add_geometry(pcd)
+
+    # Change point size
+    # render_option = vis.get_render_option()
+    # render_option.point_size = 10.0  # Set this to your desired point size
     # vis.add_geometry(coordinate_frame)
     # print("my customize extrincis matrix:")
     # print(extrinsic_matrix,selected_orientation,selected_position,intrinsic_matrix)

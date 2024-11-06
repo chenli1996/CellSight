@@ -47,7 +47,7 @@ def get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, ro
     return extrinsic_matrix
 
 def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height):
-    far_near_plane = np.array([10, 10000])
+    far_near_plane = np.array([0, 10000])
     # Transform point cloud to camera coordinate system
     points_homogeneous = np.hstack((np.asarray(pcd.points), np.ones((len(pcd.points), 1)))) # shape is (n, 4)
     camera_coord_points = extrinsic_matrix @ points_homogeneous.T # shape is (4,4) * (4, n) = (4, n)
@@ -119,6 +119,19 @@ def hidden_point_removal(pcd,para_eye):
     centroid = [0,500,0]
     # get L2 norm of the vector
     radius = np.linalg.norm(np.array(para_eye)-np.array(centroid))*1000
+    # remove hidden points
+    _, pt_map = pcd.hidden_point_removal(para_eye,radius)
+    pcd_remove = pcd.select_by_index(pt_map)
+    return pcd_remove
+
+def hidden_point_removal_fsvvd(pcd,para_eye):
+    # if pcd has no points, return empty point cloud
+    if len(pcd.points) <= 3:
+        return pcd
+    centroid = [0,0,0]
+    # get L2 norm of the vector
+    # radius = np.linalg.norm(np.array(para_eye)-np.array(centroid))*1
+    radius = 1000
     # remove hidden points
     _, pt_map = pcd.hidden_point_removal(para_eye,radius)
     pcd_remove = pcd.select_by_index(pt_map)
