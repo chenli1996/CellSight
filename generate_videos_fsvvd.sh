@@ -13,9 +13,9 @@ Sweep_user=('sulehan' 'LHJ' 'TuYuzhao' 'Sunqiran' 'yuchen' 'FengXuanqi' 'WangYan
 Presenting_user=('HKY' 'fupingyu' 'sulehan' 'yuchen' 'ChenYongting' 'WangYan' 'Sunqiran' 'GuoYushan' 'RenZhichen' 'liuxuya' 'huangrenyi' 'Guozhaonian')
 News_interviewing_user=('HKY' 'Guozhaonian' 'liuxuya' 'fupingyu' 'RenHongyu' 'sulehan' 'RenZhichen' 'huangrenyi' 'LiaoJunjian' 'GuoYushan' 'Sunqiran' 'ChenYongting' 'yuchen' 'WangYan')
 
-user_list=("${Sweep_user[@]}")
+user_list=("${Pulling_trolley_user[@]}")
 
-video_name='Sweep'
+video_name='Pulling_trolley'
 echo "Video name: $video_name"
 
 

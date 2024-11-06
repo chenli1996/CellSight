@@ -260,35 +260,6 @@ def get_camera_intrinsic_matrix_fsvvd(image_width, image_height):
 def get_camera_extrinsic_matrix_from_yaw_pitch_roll_fsvvd(yaw_degree, pitch_degree, roll_degree, t):
     # from world coordinate to camera coordinate, R is 3*3, t is 3*1, 
     t = np.array(t).reshape(3,1)
-    # t is camera position in world coordinate(numpy array)     
-    # Define camera extrinsic parameters (example values for rotation and translation)
-    # define x,y,z rotation matrix
-    # here we use left-hand coordinate system
-    # def rotation_matrix_x(theta):
-    #     return np.array([[1, 0, 0],
-    #                     [0, np.cos(theta), np.sin(theta)],
-    #                     [0, -np.sin(theta), np.cos(theta)]])
-    # def rotation_matrix_y(theta):
-    #     return np.array([[np.cos(theta), 0, -np.sin(theta)],
-    #                     [0, 1, 0],
-    #                     [np.sin(theta), 0, np.cos(theta)]])
-    # def rotation_matrix_z(theta):
-    #     return np.array([[np.cos(theta), np.sin(theta), 0],
-    #                     [-np.sin(theta), np.cos(theta), 0],
-    #                     [0, 0, 1]])
-    # # get the rotation matrix
-    # # pitch_degree, yaw_degree, roll_degree = 0, 0, 0
-    # # here we set a 180 degree offset for pitch, 
-    # # because the camera is looking to the negative z axix in the world coordinate
-    # # pitch
-    # # nose up or tail up.
-    # # yaw
-    # # nose moves from side to side
-    # # roll
-    # # a circular (clockwise or anticlockwise) movement of the body as it moves forward
-
-    # pitch, yaw, roll = np.radians(-pitch_degree)+np.radians(180), np.radians(-yaw_degree), np.radians(-roll_degree)
-    # R = rotation_matrix_x(pitch) @ rotation_matrix_y(yaw) @ rotation_matrix_z(roll)
 
     def rotation_matrix_x(theta):
         return np.array([[1, 0, 0],

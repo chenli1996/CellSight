@@ -157,13 +157,16 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
     # print('voxel_grid voxel:',voxel_grid.get_voxels())
     # print('voxel_grid voxel:',len(voxel_grid.get_voxels()))
     # get the graph max bound after voxelization
-    graph_voxel_grid_max_bound = (np.floor((max_bounds - min_bounds) / voxel_size)+1)*voxel_size + min_bounds-1
+    # import pdb; pdb.set_trace()
+    graph_voxel_grid_max_bound = (np.floor((max_bounds - min_bounds) / voxel_size)+1)*voxel_size + min_bounds
+    # graph_voxel_grid_max_bound = (np.floor((max_bounds - min_bounds) / voxel_size)+1)*voxel_size + min_bounds-1
     graph_voxel_grid_min_bound = min_bounds
     # change to int
-    graph_voxel_grid_max_bound = graph_voxel_grid_max_bound.astype(int)
-    graph_voxel_grid_min_bound = graph_voxel_grid_min_bound.astype(int)
-    print('graph max_bound:',graph_voxel_grid_max_bound)
+    # graph_voxel_grid_max_bound = graph_voxel_grid_max_bound.astype(int)
+    # graph_voxel_grid_min_bound = graph_voxel_grid_min_bound.astype(int)
     print('graph min_bound:',graph_voxel_grid_min_bound)
+    print('graph max_bound:',graph_voxel_grid_max_bound)
+    
 
     pcd_N = randomly_add_points_in_point_cloud(
         N=100000,min_bound=graph_voxel_grid_min_bound,max_bound=graph_voxel_grid_max_bound)
@@ -214,9 +217,9 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
     pcd_N = randomly_add_points_in_point_cloud(
         N=100000,min_bound=graph_min_bound,max_bound=graph_max_bound)
     point_counts_in_voxel_full, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
-
     # get the points in the FoV
     pcd_N = get_points_in_FoV(pcd_N, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
+    
     point_counts_in_voxel_FoV, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
 
     in_FoV_voxel_percentage_dict = {}

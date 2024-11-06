@@ -3,8 +3,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=16:00:00
-#SBATCH --mem=8GB	
+#SBATCH --time=8:00:00
+#SBATCH --mem=4GB	
 #SBATCH --job-name=rendering_fsvvd
 #SBATCH --output=./log/rendering_fsvvd%j.out
 #SBATCH --mail-type=END,FAIL

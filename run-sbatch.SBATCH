@@ -7,9 +7,10 @@
 #SBATCH --mem=128GB	
 #SBATCH --gres=gpu:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/multi_mse_lr1e4_G1_vs128_fov_dim128_%j.out
+#SBATCH --output=./log/catGS_sparse_vs128_%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
+#SBATCH --account=pr_186_tandon_advanced
 
 module purge
 

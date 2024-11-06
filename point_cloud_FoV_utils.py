@@ -3,6 +3,7 @@ import open3d as o3d
 from node_feature_utils import parse_trajectory_data
 import os
 from itertools import chain
+import pandas as pd
 # from test_draw import draw_my
 # user a fixed random seed
 np.random.seed(0)
@@ -297,6 +298,11 @@ def get_pcd_data(point_cloud_name='longdress', trajectory_index=0):
         pcd = o3d.io.read_point_cloud(point_cloud_path)
     return pcd
 
+def get_pcd_data_FSVVD(point_cloud_name='Chatting', trajectory_index=0):
+    FSVVD_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{point_cloud_name}/Raw/'
+    pcd = o3d.io.read_point_cloud(FSVVD_file_path + f'{trajectory_index%300}_binary.ply')
+    return pcd
+
 def get_pcd_data_binary(point_cloud_name='longdress', trajectory_index=0):
     # downsample and remove hidden points
     # 
@@ -390,6 +396,25 @@ def get_point_cloud_user_trajectory(pcd_name='longdress', participant='P03_V1'):
     # get the centroid of the positions
 
     return positions, orientations
+
+def get_point_cloud_user_trajectory_FSVVD(pcd_name='Chatting', participant='HKY'):
+    # ['Chatting','Pulling_trolley','News_interviewing','Sweep']
+    data_path = f"../point_cloud_data/processed_FSVVD/Resample_UB/{pcd_name}/"
+    file_mapping = {
+        'Chatting': f'{participant}_{pcd_name}_resampled.txt',
+        'Pulling_trolley': f'{participant}_{pcd_name}_resampled.txt',
+        'News_interviewing': f'{participant}_{pcd_name}_resampled.txt',
+        'Sweep': f'{participant}_{pcd_name}_resampled.txt'
+    }
+    file_name = file_mapping[pcd_name]
+    # positions, orientations = parse_trajectory_data(data_path + file_name, user_index=participant)
+    ub_df = pd.read_csv(data_path + file_name, delim_whitespace=True)
+    positions = ub_df.loc[:, ['HeadX', 'HeadY', 'HeadZ']].values
+    orientations = ub_df.loc[:, ['HeadRX', 'HeadRY', 'HeadRZ']].values
+    # get the centroid of the positions
+
+    return positions, orientations
+
 
 def get_point_cloud_user_trajectory_LR(pcd_name='longdress', participant='P03_V1',history=90,future=30):
     data_path = "../point_cloud_data/LR_pred/"
