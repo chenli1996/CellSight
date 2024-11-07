@@ -321,11 +321,14 @@ def save_rendering_from_given_FoV_traces_fsvvd(pcd,
     # o3d.visualization.draw([pcd,coordinate_frame],
     #                        intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix,
     #                        raw_mode=True,show_skybox=False)        
+    # pcd = pcd.voxel_down_sample(voxel_size=0.02)
+    # print('points after downsample:',len(pcd.points))
     # print('total points:',len(pcd.points)) 
     # pcd = get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height)
     # print('points in FoV:',len(pcd.points))
     # pcd = hidden_point_removal_fsvvd(pcd,para_eye)
     # print('points after hidden point removal:',len(pcd.points))
+
     # import pdb; pdb.set_trace()
     # Setting up the visualizer
     vis = o3d.visualization.Visualizer()
