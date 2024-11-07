@@ -41,7 +41,7 @@ def generate_graph(voxel_size=0.5):
     min_bounds = np.array([-1.81,  -0.81  , -2.39]) 
     max_bounds = np.array([ 1.53, 2.515,  1.50])
     
-    edge_prefix = str(voxel_size)+'FSVVD'
+    edge_prefix = str(voxel_size)
     # get the graph max and min bounds
     # graph_max_bound,graph_min_bound,graph_voxel_grid_integer_index_set,graph_voxel_grid_index_set,graph_voxel_grid_coords,original_index_to_integer_index = voxelizetion_para(
         # voxel_size=voxel_size, min_bounds=min_bounds, max_bounds=max_bounds)
@@ -132,7 +132,7 @@ def generate_node_feature():
                 # positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_MLP(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_LSTM(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
-                sample_step = 60
+                sample_step = 2
                 for trajectory_index in tqdm(range(0,(len(positions)),sample_step),desc=f'Processing {user_i}'):
                     # print(f'Processing trajectory {trajectory_index}...')
                     # Load the point cloud data

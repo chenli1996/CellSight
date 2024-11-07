@@ -358,6 +358,107 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     return train_x,train_y,test_x,test_y,val_x,val_y
 
 
+def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
+    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    # train_start = 1
+    # train_end = 5
+    # test_start = 21
+    # test_end = 26 -3
+    # val_start = 27
+    # val_end = 28
+    train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    # initialize as np array
+    train_x = np.array(train_x)
+    train_y = np.array(train_y)
+    test_x = np.array(test_x)
+    test_y = np.array(test_y)
+    val_x = np.array(val_x)
+    val_y = np.array(val_y)
+
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    pcd_name_list = ['longdress','loot','redandblack','soldier']
+    # column_name ['occlusion_feature']
+    def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
+        # p_start = p_start + start_bias
+        # p_end = p_end + end_bias
+        print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
+        train_x,train_y = [],[]
+        for pcd_name in pcd_name_list:
+            print(f'pcd_name:{pcd_name}')
+            for user_i in tqdm(range(p_start,p_end)):
+                participant = 'P'+str(user_i).zfill(2)+'_V1'
+                # generate graph voxel grid features
+                prefix = f'{pcd_name}_VS{voxel_size}_per'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
+                norm_data=getdata_normalize(node_feature_path,column_name)
+                x=np.array(norm_data,dtype=np.float32)
+                # read the data from csv file as numpy array
+                # x = pd.read_csv(node_feature_path)
+                # if only get occlusion_feature from column_name[2:7] list
+                # x = x[column_name].to_numpy()
+                # import pdb;pdb.set_trace()
+                # x=np.array(x)
+                feature_num = len(column_name)
+                # feature_num = 1
+                # print('feature_num:',feature_num)
+                x=x.reshape(feature_num,-1,num_nodes)
+                # import pdb;pdb.set_trace()
+                x=x.transpose(1,2,0)
+                train_x1,train_y1=get_history_future_data_full(x,history,future)
+                if len(train_x1) == 0:
+                    print(f'no enough data{participant}',flush=True)
+                    continue
+                train_x.append(train_x1)
+                train_y.append(train_y1)
+        # Force garbage collection
+        gc.collect()
+        # import pdb;pdb.set_trace()
+        # try:
+        if len(train_x) == 0:
+            return np.array([]),np.array([])
+        train_x = np.concatenate(train_x)
+        # except:
+        # import pdb;pdb.set_trace()
+        train_y = np.concatenate(train_y)
+        return train_x,train_y
+    # if data is saved, load it
+    # clip = 600
+    # print('clip:',clip)
+    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
+        print('load data from file')
+        # add future history in the file name
+        # add new directory data/data
+        train_x = np.load(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy')
+        train_y = np.load(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy')
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy')
+        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy')
+        val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy')
+        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy')
+
+    else:
+        print('generate data from files')
+        train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
+        test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
+        val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
+        train_x = train_x.astype(np.float32)
+        train_y = train_y.astype(np.float32)
+        test_x = test_x.astype(np.float32)
+        test_y = test_y.astype(np.float32)
+        val_x = val_x.astype(np.float32)
+        val_y = val_y.astype(np.float32)
+        # save data to file with prefix is all_videos
+        np.save(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
+        np.save(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
+        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy',test_x)
+        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy',test_y)
+        np.save(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
+        np.save(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)
+
+        print('data saved')
+
+    return train_x,train_y,test_x,test_y,val_x,val_y
+
+
 def get_train_test_data_on_users_all_videos_no_norm(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # train_start = 1
