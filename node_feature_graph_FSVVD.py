@@ -100,7 +100,8 @@ def generate_node_feature():
 
     user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
     # for pcd_name in ['longdress','loot','redandblack','soldier']:
-    for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
+    # for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
+    for pcd_name in ['Sweep']:    
     # video_name = 'Cleaning_whiteboard'
     # video_name = 'News_interviewing'
     # for pcd_name in ['soldier']:
@@ -112,7 +113,8 @@ def generate_node_feature():
         # prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
         prefix = f'{pcd_name}_VS{voxel_size}'
         # for future in [60]:
-        for future in [10,30,60,150]:
+        # for future in [10,30,60,150]:
+        for future in [150]: # for ground truth, it does not matter the future value, only use one future value
             print(f'Processing {pcd_name} with history {history} and future {future}...')
             # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
             # for user_i in tqdm(range(1,28)):    
@@ -136,7 +138,9 @@ def generate_node_feature():
                 for trajectory_index in tqdm(range(0,(len(positions)),sample_step),desc=f'Processing {user_i}'):
                     # print(f'Processing trajectory {trajectory_index}...')
                     # Load the point cloud data
-                    pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = pcd.voxel_down_sample(voxel_size=0.01)
                     # get the position and orientation for the given participant and trajectory index
                     # import pdb; pdb.set_trace()
                     position = positions[trajectory_index]
@@ -194,11 +198,12 @@ def generate_node_feature():
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
-                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+                node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature.csv')
+                print(f'saved to file /data/{prefix}/{user_i}node_feature.csv')
                  # LR for testing***********************************************
-                node_feature_df.to_csv(f'./data/{prefix}/{user_i}_node_feature{history}{future}.csv')
+                # node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature{history}{future}.csv')
                 # save to 
-                print(f'saved to file /data/{prefix}/{user_i}_node_feature{history}{future}.csv')
+                # print(f'saved to file /data/{prefix}/{user_i}node_feature{history}{future}.csv')
 
 
 

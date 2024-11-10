@@ -316,6 +316,11 @@ def get_pcd_data_FSVVD(point_cloud_name='Chatting', trajectory_index=0):
     pcd = o3d.io.read_point_cloud(FSVVD_file_path + f'{trajectory_index%300}_binary.ply')
     return pcd
 
+def get_pcd_data_FSVVD_downsampled(point_cloud_name='Chatting', trajectory_index=0):
+    FSVVD_file_path_downsample = f'../point_cloud_data/processed_FSVVD/FSVVD_300_downsample/{point_cloud_name}/Raw/'
+    pcd = o3d.io.read_point_cloud(FSVVD_file_path_downsample + f'{trajectory_index%300}_binary_downsampled.ply')
+    return pcd
+
 def get_pcd_data_binary(point_cloud_name='longdress', trajectory_index=0):
     # downsample and remove hidden points
     # 

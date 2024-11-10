@@ -15,6 +15,23 @@ def downsample_binary_pcd_data():
             o3d.io.write_point_cloud(f'./data/{point_cloud_name}/frame{trajectory_index}_downsampled.ply', pcd, write_ascii=False)
     return pcd
 
+def get_pcd_data_FSVVD(point_cloud_name='Chatting', trajectory_index=0):
+    FSVVD_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{point_cloud_name}/Raw/'
+    pcd = o3d.io.read_point_cloud(FSVVD_file_path + f'{trajectory_index%300}_binary.ply')
+    return pcd
+
+def downsample_binary_pcd_data_FSVVD():
+    # Downsample original pcd and save to the binary pcd data
+    for point_cloud_name in  ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
+        FSVVD_file_path_downsample = f'../point_cloud_data/processed_FSVVD/FSVVD_300_downsample/{point_cloud_name}/Raw/'
+        if not os.path.exists(FSVVD_file_path_downsample):
+            os.makedirs(FSVVD_file_path_downsample)
+        for trajectory_index in tqdm(range(0, 300)):
+            pcd = get_pcd_data_FSVVD(point_cloud_name, trajectory_index)
+            pcd = pcd.voxel_down_sample(voxel_size=0.01)
+            o3d.io.write_point_cloud(f'{FSVVD_file_path_downsample}/{trajectory_index}_binary_downsampled.ply', pcd, write_ascii=False)
+    return pcd
+
 def binary_pcd_data():
     # Downsample original pcd and save to the binary pcd data
     for point_cloud_name in ['longdress','loot','redandblack','soldier']:
@@ -28,5 +45,6 @@ def binary_pcd_data():
 
 
 if __name__ == "__main__":
-    downsample_binary_pcd_data()
-    binary_pcd_data()
+    # downsample_binary_pcd_data()
+    # binary_pcd_data()
+    downsample_binary_pcd_data_FSVVD()
