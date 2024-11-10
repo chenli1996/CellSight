@@ -159,6 +159,7 @@ def generate_node_feature():
                     # deep copy the pcd
                     
                     occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                    # occulusion_array = None
                     # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
                     # print('occupancy_dict:      ',occupancy_dict)
                     # print('occupancy_array:      ',occupancy_array)
