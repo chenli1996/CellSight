@@ -1,4 +1,6 @@
 # from Open3D.examples.python.visualization import video
+from hmac import new
+# from Open3D.examples.python.visualization import video
 import numpy as np
 import open3d as o3d
 import os
@@ -66,7 +68,7 @@ def fix_ply_alpha(file_path, file_name, fixed_file_path):
     return output_full_path
 
 # Example Usage
-# file_path = '../../Chatting/Raw/'
+# file_path = '../../Chatting/Filtered/'
 # file_name = 'chatting_3_raw.ply'
 # fixed_file_path = '../../Chatting/Fixed/'
 # fix_ply_alpha(file_path, file_name, fixed_file_path)
@@ -77,9 +79,9 @@ def fix_ply_alpha(file_path, file_name, fixed_file_path):
 
 # video_name = 'Chatting'
 def preprocess_VVD(video_name):
-    raw_file_path = f'../point_cloud_data/FSVVD/{video_name}/Raw/'
-    # raw_file_path = '../point_cloud_data/FSVVD/Pulling_trolley/Raw/'
-    fixed_file_path = f'../point_cloud_data/processed_FSVVD/fixed_alpha/{video_name}/Raw/'
+    raw_file_path = f'../point_cloud_data/FSVVD/{video_name}/Filtered/'
+    # raw_file_path = '../point_cloud_data/FSVVD/Pulling_trolley/Filtered/'
+    fixed_file_path = f'../point_cloud_data/processed_FSVVD/fixed_alpha/{video_name}/Filtered/'
     if not os.path.exists(fixed_file_path):
         os.makedirs(fixed_file_path)
 
@@ -115,8 +117,8 @@ def preprocess_VVD(video_name):
     # read FSVVD and preprocess to 300 frames to binary ply
 
     input_file_path = fixed_file_path
-    # input_file_path  = '../point_cloud_data/FSVVD/Chatting/Raw/'
-    output_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
+    # input_file_path  = '../point_cloud_data/FSVVD/Chatting/Filtered/'
+    output_file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Filtered/'
     # read all ply files from input_file_path and save to output_file_path with write_ascii=False using open3d
     files = os.listdir(input_file_path)
     # remove .DS_Store file if any
@@ -136,15 +138,40 @@ def preprocess_VVD(video_name):
         # o3d.visualization.draw_geometries([pcd])
         
         o3d.io.write_point_cloud(f'{output_file_path}{frame_index}_binary.ply', pcd, write_ascii=False)
+
+
+def rename_files(video_name,directory): 
+    # give a directory, rename all files in the directory. The original file name is like 0.ply, 1.ply. The output name is like video_name_0_filtered.ply, video_name_1_filtered.ply
+    files = os.listdir(directory)
+    for file in tqdm(files):
+        if file.endswith('.ply'):
+            file_path = os.path.join(directory, file)
+            # new_file = f'{video_name.lower()}_{file}_filtered.ply'
+            # new_file = f'{file.lower()}_filtered.ply'
+            new_file = f'{file.split(".")[0].lower()}_filtered.ply'
+
+            new_file_path = os.path.join(directory, new_file)
+            os.rename(file_path, new_file_path)
+            # print(f'{file} -> {new_file}')
+    print('Done!')
         # w
 if __name__ == '__main__':
     # ['Chatting', 'Pulling_trolley']
     # for video_name in ['Pulling_trolley']:
     # for video_name in ['Cleaning_whiteboard']:
-    video_name = 'Sweep'
-    video_name = 'Presenting'
-    video_name = 'News_interviewing'
-    print(f'Processing {video_name}...')
-    preprocess_VVD(video_name)
+    # video_name = 'Sweep'
+    # video_name = 'Presenting'
+    # video_name = 'News_interviewing'
+    for video_name in ['Chatting','Pulling_trolley','Sweep']:
+        print(f'Processing {video_name}...')
+        preprocess_VVD(video_name)
+
+
+
+    # rename filtered file names
+    # video_name = 'Chatting'
+    # video_name = 'Pulling_trolley'
+    # directory = f'../point_cloud_data/FSVVD/{video_name}/Filtered/'
+    # rename_files(video_name,directory)
 
 

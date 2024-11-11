@@ -99,9 +99,10 @@ def generate_node_feature():
     original_index_to_integer_index = results['original_index_to_integer_index']
 
     user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
+    user_list = ['yuchen']
     # for pcd_name in ['longdress','loot','redandblack','soldier']:
-    # for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
-    for pcd_name in ['Sweep']:    
+    for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
+    # for pcd_name in ['News_interviewing']:    
     # video_name = 'Cleaning_whiteboard'
     # video_name = 'News_interviewing'
     # for pcd_name in ['soldier']:
@@ -139,7 +140,8 @@ def generate_node_feature():
                     # print(f'Processing trajectory {trajectory_index}...')
                     # Load the point cloud data
                     # pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
-                    pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    pcd = get_pcd_data_FSVVD_filtered(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
                     # pcd = pcd.voxel_down_sample(voxel_size=0.01)
                     # get the position and orientation for the given participant and trajectory index
                     # import pdb; pdb.set_trace()
