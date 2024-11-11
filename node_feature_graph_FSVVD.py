@@ -139,9 +139,9 @@ def generate_node_feature():
                 for trajectory_index in tqdm(range(0,(len(positions)),sample_step),desc=f'Processing {user_i}'):
                     # print(f'Processing trajectory {trajectory_index}...')
                     # Load the point cloud data
-                    # pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
-                    # pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
-                    pcd = get_pcd_data_FSVVD_filtered(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = get_pcd_data_FSVVD_filtered(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
                     # pcd = pcd.voxel_down_sample(voxel_size=0.01)
                     # get the position and orientation for the given participant and trajectory index
                     # import pdb; pdb.set_trace()
