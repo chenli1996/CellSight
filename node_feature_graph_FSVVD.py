@@ -93,7 +93,7 @@ def generate_node_feature():
     # min_bounds = np.array([-1.05,  -0.81  , -1.22])
     # max_bounds = np.array([ 1.0, 0.84,  1.25])
     
-    edge_prefix = str(voxel_size)
+    # edge_prefix = str(voxel_size)
     # get the graph max and min bounds
     # graph_max_bound,graph_min_bound,graph_voxel_grid_integer_index_set,graph_voxel_grid_index_set,graph_voxel_grid_coords,original_index_to_integer_index = voxelizetion_para(
         # voxel_size=voxel_size, min_bounds=min_bounds, max_bounds=max_bounds)
@@ -106,7 +106,7 @@ def generate_node_feature():
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
-    baseline = 'GT'
+    # baseline = 'GT'
     baseline = 'LSTM'
     print(f'Processing {baseline}...')
     if baseline == 'GT':
@@ -136,8 +136,8 @@ def generate_node_feature():
         
         # prefix = f'{pcd_name}_VS{voxel_size}_filtered'
         # for future in [60]:
-        # for future in [10,30,60,150]:
-        for future in [150]: # for ground truth, it does not matter the future value, only use one future value
+        for future in [150]:
+        # for future in [150]: # for ground truth, it does not matter the future value, only use one future value
             print(f'Processing {pcd_name} with history {history} and future {future}...')
             # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
             # for user_i in tqdm(range(1,28)):    
@@ -239,7 +239,7 @@ def generate_node_feature():
 
 
 if __name__ == '__main__':
-    generate_graph(voxel_size=0.6) # run once to generate graph edges
+    # generate_graph(voxel_size=0.6) # run once to generate graph edges
     generate_node_feature()
     # downsample_binary_pcd_data()
 

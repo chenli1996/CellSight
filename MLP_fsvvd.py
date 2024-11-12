@@ -6,26 +6,14 @@ import torch.optim as optim
 from sklearn.metrics import mean_squared_error
 from torch.utils.data import DataLoader, TensorDataset
 import os
+import copy
+from sklearn.neural_network import MLPRegressor
 
-# LSTM Model Definition
-class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=2):
-        super(LSTMModel, self).__init__()
-        self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x):
-        # Initialize hidden and cell states with zeros
-        h_0 = torch.zeros(2, x.size(0), self.hidden_size).to(x.device)  # Hidden state
-        c_0 = torch.zeros(2, x.size(0), self.hidden_size).to(x.device)  # Cell state
-        
-        # Propagate input through LSTM
-        out, _ = self.lstm(x, (h_0, c_0))
-        
-        # Decode hidden state of the last time step
-        out = self.fc(out[:, -1, :])
-        return out
+# MLP Model Definition
+# Function to build a simple MLP model
+def build_mlp_model():
+    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=False, early_stopping=True)
+    return model
 
 # Function to read individual user-video data
 def read_user_video_data(user, video_name):
@@ -112,8 +100,9 @@ def get_train_test_data(df, window_size=10, future_steps=30, downsample_factor=1
     y = np.array(y)
     return X, y.reshape(y.shape[0], -1), sample_indices  # Return sample indices
 
-# Training, evaluation, and utility functions remain the same
-def train_model(model, train_loader, val_loader, num_epochs=50, learning_rate=0.001, patience=5):
+
+# Training, evaluation, and utility functions
+def train_model(model, train_loader, val_loader, num_epochs=100, learning_rate=0.001, patience=5):
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
@@ -145,14 +134,14 @@ def train_model(model, train_loader, val_loader, num_epochs=50, learning_rate=0.
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             epochs_no_improve = 0
-            best_model = model.state_dict()  # Save the best model
+            best_model = copy.deepcopy(model)  # Save the best model
         else:
             epochs_no_improve += 1
         
         # Early stopping
         if epochs_no_improve >= patience:
             print(f'Early stopping at epoch {epoch+1}')
-            model.load_state_dict(best_model)  # Load the best model
+            model = best_model  # Load the best model
             break
 
     return model
@@ -173,14 +162,14 @@ def evaluate_model(model, test_loader):
     mse = mean_squared_error(y_true, y_pred)
     return mse, y_pred
 
-# Main function adjusted to save predictions per user
+# Main function
 def main(future_steps):
     window_size = 90
-    # future_steps = 60
+    downsample_factor = 2  # For 30 FPS
 
     # Define all users and videos
     all_videos = ['Chatting', 'Pulling_trolley', 'News_interviewing', 'Sweep']
-    all_users = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 
+    all_users = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen',
                  'Sunqiran', 'WangYan', 'fupingyu', 'huangrenyi', 'liuxuya', 'sulehan', 'yuchen']
 
     # Read and combine all data
@@ -188,23 +177,25 @@ def main(future_steps):
 
     # Define train, validation, and test videos
     train_videos = ['Chatting', 'Pulling_trolley', 'News_interviewing']
-    val_videos = ['Sweep']  # We'll split 'Sweep' further for validation and test
+    val_videos = ['Sweep']
     test_videos = ['Sweep']
 
     # Split data by video
     train_data, val_data, test_data = split_data_by_video(combined_df, train_videos, val_videos, test_videos)
 
     # Further split 'Sweep' video data into validation and test sets by users
-    test_users = all_users[:6]
     val_users = all_users[6:]
-    
+    test_users = all_users[:6]
 
     val_data = val_data[val_data['User'].isin(val_users)]
     test_data = test_data[test_data['User'].isin(test_users)]
 
-    # Prepare training and validation datasets
-    X_train, y_train, _ = get_train_test_data(train_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
-    X_val, y_val, _ = get_train_test_data(val_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
+    # Prepare training and validation data
+    X_train, y_train,_ = get_train_test_data(train_data, window_size=window_size,
+                                           future_steps=future_steps, downsample_factor=downsample_factor)
+    # import pdb; pdb.set_trace()
+    X_val, y_val,_ = get_train_test_data(val_data, window_size=window_size,
+                                       future_steps=future_steps, downsample_factor=downsample_factor)
 
     # Convert data to PyTorch tensors
     train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
@@ -214,36 +205,45 @@ def main(future_steps):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    input_size = X_train.shape[2]
+    input_size = X_train.shape[1]
     hidden_size = 60
     output_size = y_train.shape[1]
 
-    model = LSTMModel(input_size, hidden_size, output_size).to(device)
+    # model = MLPModel(input_size, hidden_size, output_size, num_layers=2).to(device)
 
-    model = train_model(model, train_loader, val_loader)
-    
+    # model = train_model(model, train_loader, val_loader)
+    model = build_mlp_model()
+    model.fit(X_train, y_train)
+    # model = train_model(model, X_train, y_train)
+
+    mse = evaluate_model(model, X_test, y_test)
+    print(f'Mean Squared Error: {mse}')
+
     # Process test data per user
     for user in test_users:
         print(f"Processing predictions for user: {user}")
 
-        user_test_data = test_data[test_data['User'] == user].copy()
+        user_test_data = test_data[test_data['User'] == user].copy().reset_index(drop=True)
 
-        # Prepare dataset for the user
-        X_test, y_test, sample_indices = get_train_test_data(user_test_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
+        X_test, y_test, sample_indices = get_train_test_data(user_test_data, window_size=window_size,
+                                             future_steps=future_steps, downsample_factor=downsample_factor)
 
         if len(X_test) == 0:
             print(f"No test data for user {user} after applying window_size and future_steps.")
             continue
 
+        # Convert data to PyTorch tensors
         test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
-
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-        mse, y_pred = evaluate_model(model, test_loader)
+        # mse, y_pred = evaluate_model(model, test_loader)
+        y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
         print(f"User: {user}, Mean Squared Error: {mse}")
 
         y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
 
+        # Map predictions back to original data structure
         # Build a DataFrame with the same structure as the original data
         pred_df = user_test_data.copy()
         # import pdb; pdb.set_trace()
@@ -253,22 +253,17 @@ def main(future_steps):
         # Fill in the predicted values at the corresponding indices
         pred_df.loc[sample_indices, ['HeadX', 'HeadY', 'HeadZ', 'HeadRX', 'HeadRY', 'HeadRZ']] = y_pred_transformed
 
-        # Reset index if needed
-        # pred_df.reset_index(drop=False, inplace=True)
-
-        # Save the DataFrame to file
-        pred_file_path = f"../point_cloud_data/LSTM_pred_fsvvd/{test_videos[0]}/"
+        # Save predictions
+        pred_file_path = f"../point_cloud_data/MLP_pred_fsvvd/{test_videos[0]}/"
         if not os.path.exists(pred_file_path):
             os.makedirs(pred_file_path)
 
-        pred_file_name = f"{user}_{test_videos[0]}_resampled_pred{window_size}{future_steps}.txt"
+        pred_file_name = f"{user}_{test_videos[0]}_resampled_pred_MLP{window_size}{future_steps}.txt"
 
-        # Save the DataFrame
-        # Use the same delimiter and format as the input files
         pred_df.to_csv(os.path.join(pred_file_path, pred_file_name), sep='\t', index=False)
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    for future_steps in [1]:
+    for future_steps in [10, 30, 60, 150]:
         print(f"Future Steps: {future_steps}")
         main(future_steps)

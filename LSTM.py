@@ -1,3 +1,4 @@
+from turtle import st
 import numpy as np
 import pandas as pd
 import torch
@@ -6,6 +7,26 @@ import torch.optim as optim
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import r2_score
+# fix random seed for reproducibility
+import random
+
+
+# Function to set the seed for reproducibility
+def set_seed(seed):
+    random.seed(seed)  # Python random module
+    np.random.seed(seed)  # NumPy random module
+    torch.manual_seed(seed)  # PyTorch CPU random generator
+    torch.cuda.manual_seed(seed)  # PyTorch GPU random generator
+    torch.cuda.manual_seed_all(seed)  # If you are using multi-GPU.
+    
+    # For deterministic behavior, set the following flags
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+# Set the seed at the beginning of your script
+set_seed(42)
+
 
 # LSTM Model Definition
 # Simple LSTM Model Definition
@@ -206,6 +227,16 @@ def main(future_steps):
     mse, y_pred = evaluate_model(model, test_loader)
     # import pdb; pdb.set_trace()
     print(f'Mean Squared Error: {mse}')
+
+    # calculate variance of the test data
+    test_data_variance = np.var((y_pred - y_test), axis=0)
+    std = np.std((y_pred - y_test)**2, axis=0)
+    print(f'Test Data Loss std: {std.mean()}')
+    print(f'Test Data Loss Variance: {test_data_variance.mean()}')
+
+    # calculate R2 score
+    r2 = r2_score(y_test, y_pred)
+    print(f'R2 Score: {r2}')
     
     y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
 

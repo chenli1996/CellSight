@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from torchmetrics import MeanAbsoluteError
 from torchmetrics import MeanAbsolutePercentageError
 from torchmetrics import MeanSquaredError
+from torchmetrics import R2Score
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data,Batch
 from tqdm import tqdm
@@ -233,6 +234,76 @@ def get_train_test_data_on_users_all_videos_MLP(history,future,p_start=1,p_end=2
         print('data saved')
     return test_x,test_y
 
+def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
+    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
+    # train_start = 1
+    # train_end = 5
+    # test_start = 21
+    # test_end = 26 -3
+    # val_start = 27
+    # val_end = 28
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    pcd_name_list = ['longdress','loot','redandblack','soldier']
+    # pcd_name_list = ['soldier']
+    # column_name ['occlusion_feature']
+    def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
+        # p_start = p_start + start_bias
+        # p_end = p_end + end_bias
+        print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
+        train_x,train_y = [],[]
+        for pcd_name in pcd_name_list:
+            print(f'pcd_name:{pcd_name}')
+            for user_i in tqdm(range(p_start,p_end)):
+                participant = 'P'+str(user_i).zfill(2)+'_V1'
+                # generate graph voxel grid features
+                prefix = f'{pcd_name}_VS{voxel_size}_{baseline}'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature{history}{future}.csv'
+                norm_data=getdata_normalize(node_feature_path,column_name)
+                x=np.array(norm_data)
+                feature_num = len(column_name)
+                # feature_num = 1
+                # print('feature_num:',feature_num)
+                x=x.reshape(feature_num,-1,num_nodes)
+                # import pdb;pdb.set_trace()
+                x=x.transpose(1,2,0)
+                train_x1,train_y1=get_history_future_data_full(x,history,future)
+                if len(train_x1) == 0:
+                    print(f'no enough data{participant}')
+                    continue
+                train_x.append(train_x1)
+                train_y.append(train_y1)
+        # import pdb;pdb.set_trace()
+        # try:
+        if len(train_x) == 0:
+            return [],[]
+        train_x = np.concatenate(train_x)
+        # except:
+        # import pdb;pdb.set_trace()
+        train_y = np.concatenate(train_y)
+        return train_x,train_y
+    # if data is saved, load it
+    # clip = 600
+    # print('clip:',clip)
+    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
+    if os.path.exists(f'./data/data/ddall_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy'):
+        print('load data from file')
+        # add future history in the file name
+        # add new directory data/data
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy')
+        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy')
+    else:
+        print('generate data from files')
+        # train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
+        test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
+        # val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
+        test_x = test_x.astype(np.float32)
+        test_y = test_y.astype(np.float32)
+        # save data to file with prefix is all_videos
+        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy',test_x)
+        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy',test_y)
+        print('data saved')
+    return test_x,test_y
+
 def get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # train_start = 1
@@ -404,11 +475,31 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
 
     return test_x,test_y
 
+def compute_r2_per_sample(y_true, y_pred):
+    # Compute mean of true values per sample
+    y_true_mean = y_true.mean(dim=1, keepdim=True)
+
+    # Compute total sum of squares (SS_tot) per sample
+    ss_tot = ((y_true - y_true_mean) ** 2).sum(dim=1)
+
+    # Compute residual sum of squares (SS_res) per sample
+    ss_res = ((y_true - y_pred) ** 2).sum(dim=1)
+
+    # Compute R² score per sample
+    r2_scores = torch.ones_like(ss_tot)
+    non_zero_tot = ss_tot != 0
+    r2_scores[non_zero_tot] = 1 - ss_res[non_zero_tot] / ss_tot[non_zero_tot]
+    r2_scores[~non_zero_tot] = 0.0  # Set R² to 0.0 when SS_tot is zero
+
+    return r2_scores
+
+dataset = '8i'
+# dataset = 'fsvvd_full'
 
 
-dataset = 'fsvvd_full'
 baseline = 'LSTM'
-# dataset = '8i'
+# baseline = 'MLP'
+
 if dataset == 'fsvvd_full':
     voxel_size = 0.6
     p_start = 0
@@ -445,7 +536,8 @@ predict_end_index = 3 #visibility
 output_size = 1
 
 # for future in [30]:
-for future in [150]:
+for future in [150,60,30,10]:
+# for future in [1]:
     print(f'history:{history},future:{future}')
     output_size = 1
     if dataset == '8i':
@@ -461,9 +553,10 @@ for future in [150]:
     # test_y_LR = torch.from_numpy(test_y_LR)
     if dataset == '8i':
         # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_TLR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_MLP(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_MLP(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     else:
         test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start,p_end,voxel_size,num_nodes)
     del test_x_TLR
@@ -478,6 +571,7 @@ for future in [150]:
     mae = MeanAbsoluteError()
     mape=MeanAbsolutePercentageError()
     mse=MeanSquaredError()
+    r2_score = R2Score()
     if torch.cuda.is_available():
         mae = mae.to('cuda')
         mape = mape.to('cuda')
@@ -504,8 +598,31 @@ for future in [150]:
     #         print(f'MSE:{MSE},MAE:{MAE}',f'index:{i}')
     
     MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
+    # Calculate the squared errors
+    squared_errors = (
+        test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
+        test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
+    ) ** 2
+
+    # Flatten the squared errors if needed
+    squared_errors = squared_errors.view(-1)
+
+    # Compute the variance of the squared errors
+    variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
+
+    print("Variance of the prediction loss:", variance)
+    # Flatten the tensors
+    y_true = test_y[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
+    y_pred = test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
+
+    # Compute R² score
+    # Compute per-sample R² scores
+    r2_scores = compute_r2_per_sample(y_true, y_pred)
+    # import pdb;pdb.set_trace()
+    # Compute the final R² score
+    final_r2_score = r2_scores.mean().item()
     MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
-    print(f'MSE:{MSE_d},MAE:{MAE_d}',f'history:{history},future:{future}')
+    print(f'MSE:{MSE_d},MAE:{MAE_d}, R² Score: {final_r2_score}',f'history:{history},future:{future}')
     # get the var of test_y[:,u,:,2:3] after masking off all zeros
     # test_y = test_y_TLR
     # test_y = test_y.cpu().detach().numpy()

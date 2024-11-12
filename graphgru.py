@@ -19,6 +19,8 @@ def main(future=10):
     with_train = True
     continue_train_early_stop_val = False
     user_previous_model = False # whether to load previous model
+    if not with_train:
+        user_previous_model = True # whether to load previous model
     last_val_loss = 0.210087
     object_driven = False
     dataset = 'fsvvd_full'
@@ -299,7 +301,7 @@ def main(future=10):
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
-    for future in [150,60,30,10]:
-    # for future in [60,30,10]:
+    # for future in [150,60,30,10]:
+    for future in [1]:
         print(f'future:{future}')
         main(future)
