@@ -96,20 +96,20 @@ def generate_node_feature():
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
-    # for pcd_name in ['longdress','loot','redandblack','soldier']:
-    for pcd_name in ['soldier']:
+    for pcd_name in ['longdress','loot','redandblack','soldier']:
+    # for pcd_name in ['soldier']:
         history = 90
         # future = 60
         # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
-        prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
-        # prefix = f'{pcd_name}_VS{voxel_size}'
+        # prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
+        prefix = f'{pcd_name}_VS{voxel_size}'
         # for future in [60]:
-        for future in [150]:
+        for future in [1]:
             print(f'Processing {pcd_name} with history {history} and future {future}...')
-            for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
-            # for user_i in tqdm(range(1,28)):                
+            # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
+            for user_i in tqdm(range(1,28)):                
             # for user_i in tqdm(range(1,2)):                
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 node_index = []
@@ -119,11 +119,11 @@ def generate_node_feature():
                 distance_feature = []
                 coordinate_feature = []
                 # choose different trajectory files***********************************************
-                # positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
+                positions,orientations = get_point_cloud_user_trajectory(pcd_name=pcd_name,participant=participant)
                 # positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future) # LR is _LR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_MLP(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
-                positions,orientations = get_point_cloud_user_trajectory_LSTM(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
+                # positions,orientations = get_point_cloud_user_trajectory_LSTM(pcd_name=pcd_name,participant=participant,history=history,future=future) # MLP is _MLP for testing***********************************************
 
                 for trajectory_index in tqdm(range((len(positions))),desc=f'Processing {participant}'):
                     # print(f'Processing trajectory {trajectory_index}...')
@@ -188,11 +188,12 @@ def generate_node_feature():
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
-                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+                node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+                print(f'saved to file /data/{prefix}/{participant}node_feature.csv')
                  # LR for testing***********************************************
-                node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
+                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
                 # save to 
-                print(f'saved to file /data/{prefix}/{participant}node_feature{history}{future}.csv')
+                # print(f'saved to file /data/{prefix}/{participant}node_feature{history}{future}.csv')
 
 
 

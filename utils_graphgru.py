@@ -287,7 +287,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
             for user_i in tqdm(range(p_start,p_end)):
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 # generate graph voxel grid features
-                prefix = f'{pcd_name}_VS{voxel_size}_per'
+                prefix = f'{pcd_name}_VS{voxel_size}'
                 node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
@@ -323,7 +323,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     # if data is saved, load it
     # clip = 600
     # print('clip:',clip)
-    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
+    if os.path.exists(f'./data/data/dall_videos_train_x{history}_{future}_{voxel_size}.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data

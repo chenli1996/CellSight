@@ -535,8 +535,8 @@ history=90
 predict_end_index = 3 #visibility
 output_size = 1
 
-# for future in [30]:
-for future in [150,60,30,10]:
+for future in [1]:
+# for future in [150,60,30,10,1]:
 # for future in [1]:
     print(f'history:{history},future:{future}')
     output_size = 1

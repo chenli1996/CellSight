@@ -249,7 +249,7 @@ def main(future_steps):
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # for future_steps in [10, 30, 60, 150]:
-    for future_steps in [150]:
+    for future_steps in [1, 10, 30, 60, 150]:
+    # for future_steps in [150]:
         print(f"Future Steps: {future_steps}")
         main(future_steps)
