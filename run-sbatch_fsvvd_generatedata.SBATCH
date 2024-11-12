@@ -3,10 +3,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=6:00:00
+#SBATCH --time=18:00:00
 #SBATCH --mem=64GB	
 #SBATCH --job-name=rendering_fsvvd
-#SBATCH --output=./log/generate_fsvvd_gt%j.out
+#SBATCH --output=./log/generate_fsvvd_gt_filtered%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
 #SBATCH --account=pr_186_tandon_advanced

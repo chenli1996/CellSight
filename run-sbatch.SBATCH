@@ -3,11 +3,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=12:00:00
+#SBATCH --time=16:00:00
 #SBATCH --mem=128GB	
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --job-name=graphgru
-#SBATCH --output=./log/catGS_sparse_vs128_%j.out
+#SBATCH --output=./log/fsvvd_catGS_sparse_vs128_%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
 #SBATCH --account=pr_186_tandon_advanced

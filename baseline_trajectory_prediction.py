@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
+import os
 
 def linear_regression(x, y):
     """
@@ -235,6 +236,8 @@ def linear_regression_baseline():
     data_index = "H4"
     file_name = f'{data_index}_nav.csv'
     pred_file_path = "../point_cloud_data/LR_pred/"
+    if not os.path.exists(pred_file_path):
+        os.makedirs(pred_file_path)
 
     # for future_steps in [1,30,40,60,90,150]:
     # for future_steps in [1,10,30,60]:
@@ -284,16 +287,18 @@ def linear_regression_baseline():
 
 def truncated_linear_regression_baseline():
     # read ground truth data
-    window_size_lr = 60
+    window_size_lr = 90
     # future_steps =150
     file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     data_index = "H4"
     file_name = f'{data_index}_nav.csv'
     pred_file_path = "../point_cloud_data/TLR_pred/"
+    if not os.path.exists(pred_file_path):
+        os.makedirs(pred_file_path)
 
-    # for future_steps in [1,30,60,90,150]:
+    for future_steps in [10,30,60,150]:
     # for future_steps in [1,10,30,60]:
-    for future_steps in [60]:
+    # for future_steps in [60]:
         pred_file_name = f"{data_index}_nav_tlpred"+str(window_size_lr)+str(future_steps)+".csv"  
         diff_file_name = f"{data_index}_nav_tldiff"+str(window_size_lr)+str(future_steps)+".csv"
         gt_file_name = f"{data_index}_nav_gt.csv"

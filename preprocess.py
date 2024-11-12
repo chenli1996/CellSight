@@ -1,6 +1,7 @@
+from webbrowser import get
 import open3d as o3d
 import os
-from point_cloud_FoV_utils import get_pcd_data_original
+from point_cloud_FoV_utils import get_pcd_data_FSVVD_filtered, get_pcd_data_original
 from tqdm import tqdm
 import pandas as pd
 
@@ -23,11 +24,12 @@ def get_pcd_data_FSVVD(point_cloud_name='Chatting', trajectory_index=0):
 def downsample_binary_pcd_data_FSVVD():
     # Downsample original pcd and save to the binary pcd data
     for point_cloud_name in  ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
-        FSVVD_file_path_downsample = f'../point_cloud_data/processed_FSVVD/FSVVD_300_downsample/{point_cloud_name}/Raw/'
+        FSVVD_file_path_downsample = f'../point_cloud_data/processed_FSVVD/FSVVD_300_downsample/{point_cloud_name}/Filtered/'
         if not os.path.exists(FSVVD_file_path_downsample):
             os.makedirs(FSVVD_file_path_downsample)
         for trajectory_index in tqdm(range(0, 300)):
-            pcd = get_pcd_data_FSVVD(point_cloud_name, trajectory_index)
+            pcd = get_pcd_data_FSVVD_filtered(point_cloud_name, trajectory_index)
+            # pcd = get_pcd_data_FSVVD(point_cloud_name, trajectory_index)
             pcd = pcd.voxel_down_sample(voxel_size=0.01)
             o3d.io.write_point_cloud(f'{FSVVD_file_path_downsample}/{trajectory_index}_binary_downsampled.ply', pcd, write_ascii=False)
     return pcd

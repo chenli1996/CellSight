@@ -188,9 +188,9 @@ def generate_node_feature():
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
-                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
+                node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature.csv')
                  # LR for testing***********************************************
-                node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
+                # node_feature_df.to_csv(f'./data/{prefix}/{participant}node_feature{history}{future}.csv')
                 # save to 
                 print(f'saved to file /data/{prefix}/{participant}node_feature{history}{future}.csv')
 

@@ -1,3 +1,4 @@
+# from point_cloud_FoV_Graph import baseline_loss
 from voxel_grid import *
 from point_cloud_FoV_utils import *
 import pandas as pd
@@ -37,11 +38,15 @@ def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
 def generate_graph(voxel_size=0.5):   
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
+
     # voxel_size = int(64)
-    min_bounds = np.array([-1.81,  -0.81  , -2.39]) 
-    max_bounds = np.array([ 1.53, 2.515,  1.50])
+    min_bounds = np.array([-2.82,  -0.78  , -2.31]) 
+    max_bounds = np.array([ 1.32, 2.08,  1.94])
+
+    # min_bounds = np.array([-1.05,  -0.81  , -1.22])
+    # max_bounds = np.array([ 1.0, 0.84,  1.25])
     
-    edge_prefix = str(voxel_size)
+    edge_prefix = str(voxel_size) + 'fsvvd_raw'
     # get the graph max and min bounds
     # graph_max_bound,graph_min_bound,graph_voxel_grid_integer_index_set,graph_voxel_grid_index_set,graph_voxel_grid_coords,original_index_to_integer_index = voxelizetion_para(
         # voxel_size=voxel_size, min_bounds=min_bounds, max_bounds=max_bounds)
@@ -55,7 +60,7 @@ def generate_graph(voxel_size=0.5):
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
     # if graph_edges_integer_index.csv exists, then load the graph_edges from the csv file
-    if os.path.exists(f'./data/{edge_prefix}/graph_edges_integer_index.csv'):
+    if os.path.exists(f'./data/{edge_prefix}/graph_edges_integer_index_xxxxxx.csv'):
         graph_edges_df_integer = pd.read_csv(f'./data/{edge_prefix}/graph_edges_integer_index.csv')
         # graph_edges_ingeter = graph_edges_df_integer.values
         graph_edges_ingeter = graph_edges_df_integer[['start_node','end_node','edge_feature']].values
@@ -80,9 +85,13 @@ def generate_node_feature():
     # trajectory_index = 0
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
-    voxel_size = 0.5
-    min_bounds = np.array([-1.81,  -0.81  , -2.39]) 
-    max_bounds = np.array([ 1.53, 2.515,  1.50])
+    voxel_size = 0.6
+    min_bounds = np.array([-2.82,  -0.78  , -2.31]) 
+    max_bounds = np.array([ 1.32, 2.08,  1.94])
+
+    # voxel_size = 0.4
+    # min_bounds = np.array([-1.05,  -0.81  , -1.22])
+    # max_bounds = np.array([ 1.0, 0.84,  1.25])
     
     edge_prefix = str(voxel_size)
     # get the graph max and min bounds
@@ -97,22 +106,35 @@ def generate_node_feature():
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
+    baseline = 'GT'
+    baseline = 'LSTM'
+    print(f'Processing {baseline}...')
+    if baseline == 'GT':
+        user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
+    # test_user_list = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 'Sunqiran']
+    else:# testing set only
+        # user_list = ['WangYan', 'fupingyu', 'huangrenyi', 'liuxuya', 'sulehan', 'yuchen']
+        user_list = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 'Sunqiran']
 
-    user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
-    user_list = ['yuchen']
+    # user_list = ['yuchen']
     # for pcd_name in ['longdress','loot','redandblack','soldier']:
-    for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
-    # for pcd_name in ['News_interviewing']:    
+    # for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
+    for pcd_name in ['Sweep']:    
     # video_name = 'Cleaning_whiteboard'
     # video_name = 'News_interviewing'
     # for pcd_name in ['soldier']:
         history = 90
         # future = 60
+        if baseline == 'GT':
+            prefix = f'{pcd_name}_VS{voxel_size}'
+        else:
+            prefix = f'{pcd_name}_VS{voxel_size}_{baseline}'
         # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
         # prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
-        prefix = f'{pcd_name}_VS{voxel_size}'
+        
+        # prefix = f'{pcd_name}_VS{voxel_size}_filtered'
         # for future in [60]:
         # for future in [10,30,60,150]:
         for future in [150]: # for ground truth, it does not matter the future value, only use one future value
@@ -129,7 +151,10 @@ def generate_node_feature():
                 distance_feature = []
                 coordinate_feature = []
                 # choose different trajectory files***********************************************
-                positions,orientations = get_point_cloud_user_trajectory_FSVVD(pcd_name=pcd_name,participant=user_i)
+                if baseline == 'GT':
+                    positions,orientations = get_point_cloud_user_trajectory_FSVVD(pcd_name=pcd_name,participant=user_i)
+                else:
+                    positions,orientations = get_point_cloud_user_trajectory_FSVVD_baseline(baseline=baseline,pcd_name=pcd_name,participant=user_i,history=history,future=future)
                 # import pdb; pdb.set_trace()
                 # positions,orientations = get_point_cloud_user_trajectory_LR(pcd_name=pcd_name,participant=participant,history=history,future=future) # LR is _LR for testing***********************************************
                 # positions,orientations = get_point_cloud_user_trajectory_TLR(pcd_name=pcd_name,participant=participant,history=history,future=future) # TLR is _TLR for testing***********************************************
@@ -139,8 +164,9 @@ def generate_node_feature():
                 for trajectory_index in tqdm(range(0,(len(positions)),sample_step),desc=f'Processing {user_i}'):
                     # print(f'Processing trajectory {trajectory_index}...')
                     # Load the point cloud data
-                    pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
-                    pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = get_pcd_data_FSVVD(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    # pcd = get_pcd_data_FSVVD_downsampled(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
+                    pcd = get_pcd_data_FSVVD_downsampled_fsvvd(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
                     # pcd = get_pcd_data_FSVVD_filtered(point_cloud_name=pcd_name, trajectory_index=trajectory_index)
                     # pcd = pcd.voxel_down_sample(voxel_size=0.01)
                     # get the position and orientation for the given participant and trajectory index
@@ -200,18 +226,20 @@ def generate_node_feature():
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
-                node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature.csv')
-                print(f'saved to file /data/{prefix}/{user_i}node_feature.csv')
+                if baseline == 'GT':
+                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature.csv')
+                    print(f'saved to file /data/{prefix}/{user_i}node_feature.csv')
+                else:
                  # LR for testing***********************************************
-                # node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature{history}{future}.csv')
+                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature{history}{future}.csv')
                 # save to 
-                # print(f'saved to file /data/{prefix}/{user_i}node_feature{history}{future}.csv')
+                    print(f'saved to file /data/{prefix}/{user_i}node_feature{history}{future}.csv')
 
 
 
 
 if __name__ == '__main__':
-    # generate_graph(voxel_size=0.5) # run once to generate graph edges
+    generate_graph(voxel_size=0.6) # run once to generate graph edges
     generate_node_feature()
     # downsample_binary_pcd_data()
 

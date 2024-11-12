@@ -188,7 +188,8 @@ def voxelizetion_para(voxel_size=256, min_bounds=np.array([-251,    0, -241]), m
 
 
     # create a dict to map the integer index to the original index
-    x_num,y_num,z_num = ((graph_voxel_grid_max_bound - graph_voxel_grid_min_bound + 1) / voxel_size).astype(int)
+    x_num,y_num,z_num = ((graph_voxel_grid_max_bound - graph_voxel_grid_min_bound) / voxel_size).astype(int)
+    # import pdb; pdb.set_trace()
     original_index_to_integer_index = {index : index[0]*y_num*z_num + index[1]*z_num + index[2] for index in voxel_grid_index_set}
     print('original_index_to_integer_index:',original_index_to_integer_index)
     # convert the index to a singel integer index

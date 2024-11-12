@@ -1,5 +1,6 @@
 # from Open3D.examples.python.visualization import video
 from hmac import new
+from webbrowser import get
 # from Open3D.examples.python.visualization import video
 import numpy as np
 import open3d as o3d
@@ -154,17 +155,94 @@ def rename_files(video_name,directory):
             os.rename(file_path, new_file_path)
             # print(f'{file} -> {new_file}')
     print('Done!')
+
+# get the graph max/min boundary
+def get_graph_boundary(video_name):
+    # video_name = 'Chatting'
+    file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
+    # file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Filtered/'
+    files = os.listdir(file_path)
+    files = [file for file in files if file.endswith('.ply')]
+    files.sort(key=lambda x: int(x.split('_')[-2]))
+    # files
+    max_x = -float('inf')
+    min_x = float('inf')
+    max_y = -float('inf')
+    min_y = float('inf')
+    max_z = -float('inf')
+    min_z = float('inf')
+    for file in tqdm(files):
+        pcd = o3d.io.read_point_cloud(file_path+file)
+        points = np.asarray(pcd.points)
+        max_x = max(max_x, np.max(points[:,0]))
+        min_x = min(min_x, np.min(points[:,0]))
+        max_y = max(max_y, np.max(points[:,1]))
+        min_y = min(min_y, np.min(points[:,1]))
+        max_z = max(max_z, np.max(points[:,2]))
+        min_z = min(min_z, np.min(points[:,2]))
+    # print(f'min_x: {min_x}, max_x: {max_x}, min_y: {min_y}, max_y: {max_y}, min_z: {min_z}, max_z: {max_z}')
+    return min_x, max_x, min_y, max_y, min_z, max_z    
+
+# get the 90 percentile of the graph boundary on the positive side and negative side
+def get_graph_boundary_90_percentile(video_name):
+    # video_name = 'Chatting'
+    file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Raw/'
+    # file_path = f'../point_cloud_data/processed_FSVVD/FSVVD_300/{video_name}/Filtered/'
+    files = os.listdir(file_path)
+    files = [file for file in files if file.endswith('.ply')]
+    files.sort(key=lambda x: int(x.split('_')[-2]))
+    # files
+    max_x = -float('inf')
+    min_x = float('inf')
+    max_y = -float('inf')
+    min_y = float('inf')
+    max_z = -float('inf')
+    min_z = float('inf')
+    for file in tqdm(files):
+        pcd = o3d.io.read_point_cloud(file_path+file)
+        points = np.asarray(pcd.points)
+        max_x = max(max_x, np.percentile(points[:,0], 99))
+        min_x = min(min_x, np.percentile(points[:,0], 1))
+        max_y = max(max_y, np.percentile(points[:,1], 99))
+        min_y = min(min_y, np.percentile(points[:,1], 1))
+        max_z = max(max_z, np.percentile(points[:,2], 99))
+        min_z = min(min_z, np.percentile(points[:,2], 1))
+    # print(f'min_x: {min_x}, max_x: {max_x}, min_y: {min_y}, max_y: {max_y}, min_z: {min_z}, max_z: {max_z}')
+    return min_x, max_x, min_y, max_y, min_z, max_z
+
+# get the boundary for all videos
+def get_all_graph_boundary():
+    video_names = ['Chatting','Pulling_trolley','News_interviewing','Sweep']
+    min_x = float('inf')
+    max_x = -float('inf')
+    min_y = float('inf')
+    max_y = -float('inf')
+    min_z = float('inf')
+    max_z = -float('inf')
+    for video_name in video_names:
+        print(f'Processing {video_name}...')
+        # min_x_video, max_x_video, min_y_video, max_y_video, min_z_video, max_z_video = get_graph_boundary(video_name)
+        min_x_video, max_x_video, min_y_video, max_y_video, min_z_video, max_z_video = get_graph_boundary_90_percentile(video_name)
+        # print boundary for each video
+        print(f'min_x: {min_x_video}, max_x: {max_x_video}, min_y: {min_y_video}, max_y: {max_y_video}, min_z: {min_z_video}, max_z: {max_z_video}')
+        min_x = min(min_x, min_x_video)
+        max_x = max(max_x, max_x_video)
+        min_y = min(min_y, min_y_video)
+        max_y = max(max_y, max_y_video)
+        min_z = min(min_z, min_z_video)
+        max_z = max(max_z, max_z_video)
+
+    print(f'min_x: {min_x}, max_x: {max_x}, min_y: {min_y}, max_y: {max_y}, min_z: {min_z}, max_z: {max_z}')
+    return min_x, max_x, min_y, max_y, min_z, max_z
+
+
         # w
 if __name__ == '__main__':
-    # ['Chatting', 'Pulling_trolley']
+    # fix alpha, convert to binary ply, and preprocess to 300 frames
     # for video_name in ['Pulling_trolley']:
-    # for video_name in ['Cleaning_whiteboard']:
-    # video_name = 'Sweep'
-    # video_name = 'Presenting'
-    # video_name = 'News_interviewing'
-    for video_name in ['Chatting','Pulling_trolley','Sweep']:
-        print(f'Processing {video_name}...')
-        preprocess_VVD(video_name)
+    # for video_name in ['Chatting','Pulling_trolley','Sweep']:
+    #     print(f'Processing {video_name}...')
+    #     preprocess_VVD(video_name)
 
 
 
@@ -173,5 +251,9 @@ if __name__ == '__main__':
     # video_name = 'Pulling_trolley'
     # directory = f'../point_cloud_data/FSVVD/{video_name}/Filtered/'
     # rename_files(video_name,directory)
+
+
+# get the graph max/min boundary
+    get_all_graph_boundary()
 
 

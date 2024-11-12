@@ -1,3 +1,4 @@
+from tabnanny import verbose
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error
 import numpy as np
@@ -6,7 +7,7 @@ import joblib
 
 # Function to build a simple MLP model
 def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=True, early_stopping=True)
+    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=False, early_stopping=True)
     return model
 
 # Function to read training data
@@ -134,6 +135,7 @@ def main(future_steps):
     test_data_pred.to_csv(pred_file_path + pred_file_name, index=False)
 
 if __name__ == '__main__':
-    for future_steps in [10, 30, 60, 90, 150]:
+    for future_steps in [10, 30, 60, 150]:
+    # for future_steps in [60]:
         main(future_steps)
     # main()

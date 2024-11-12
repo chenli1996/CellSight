@@ -96,6 +96,7 @@ def get_train_test_data(df, window_size=10, future_steps=30):
 
     X = np.array(X)
     y = np.array(y)
+    # import pdb; pdb.set_trace()
     return X, y.reshape(y.shape[0], -1)  # Flatten y to be 2D
 
 # Function to train the model
@@ -203,6 +204,7 @@ def main(future_steps):
     model = train_model(model, train_loader, val_loader)
     
     mse, y_pred = evaluate_model(model, test_loader)
+    # import pdb; pdb.set_trace()
     print(f'Mean Squared Error: {mse}')
     
     y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
@@ -216,6 +218,7 @@ def main(future_steps):
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    for future_steps in [10, 30, 60, 150]:
+    # for future_steps in [10, 30, 60, 150]:
+    for future_steps in [150]:
         print(f"Future Steps: {future_steps}")
         main(future_steps)

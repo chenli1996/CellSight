@@ -21,19 +21,38 @@ def main(future=10):
     user_previous_model = False # whether to load previous model
     last_val_loss = 0.210087
     object_driven = False
-    voxel_size = int(128)
+    dataset = 'fsvvd_full'
+    # dataset = '8i'
+    if dataset == 'fsvvd_full':
+        voxel_size = 0.6
+        p_start = 0
+        p_end = 11
+        edge_prefix = str(voxel_size) + 'fsvvd_raw'
+    elif dataset == 'fsvvd_filtered':
+        voxel_size = 0.4
+        p_start = 0
+        p_end = 11
+        edge_prefix = str(voxel_size) + 'fsvvd_filtered'
+    elif dataset == '8i':
+        voxel_size = 128
+        p_start = 1
+        p_end = 28
+        edge_prefix = str(voxel_size)
     if voxel_size == 128:
         num_nodes = 240
     elif voxel_size == 64:
         num_nodes = 1728
+    elif voxel_size == 0.6: # fsvvd full raw
+        num_nodes = 280
+    # elif voxel_size == 0.4:
     else:
         num_nodes = None
     history = 90
     future=future
     # history,future=3,10
     target_output = 1
-    p_start = 1
-    p_end = 28
+    # p_start = 1
+    # p_end = 28
     # p_end = 4
     output_size = 1
     predict_index_end=3 # 3 is occlusion, 2 is in-fov
@@ -52,14 +71,21 @@ def main(future=10):
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
     # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    model_prefix = f'multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
+    model_prefix = f'{dataset}multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
 
-    print(model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
-
-
+    print(dataset,model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
 
 
-    train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+
+    if dataset == 'fsvvd_full':
+        train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+    elif dataset == 'fsvvd_filtered':
+        pass
+    elif dataset == '8i':
+        train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+    else:
+        pass
+    
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
@@ -98,7 +124,7 @@ def main(future=10):
     # import pdb;pdb.set_trace()
     # print('len of train_loader:',len(train_loader),'len of test_loader:',len(test_loader),'len of val_loader:',len(val_loader))  
     # load graph edges
-    edge_prefix = str(voxel_size)
+
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
     # r1, r2 = getedge('newedge',900)
     r1, r2 = getedge(edge_path)

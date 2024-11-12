@@ -46,7 +46,7 @@ def get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, ro
     extrinsic_matrix = np.vstack((extrinsic_matrix, np.array([0, 0, 0, 1])))
     return extrinsic_matrix
 
-def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height):
+def get_points_in_FoV_old_one_z_0(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height):
     far_near_plane = np.array([0, 10000])
     # Transform point cloud to camera coordinate system
     points_homogeneous = np.hstack((np.asarray(pcd.points), np.ones((len(pcd.points), 1)))) # shape is (n, 4)
@@ -70,6 +70,45 @@ def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, imag
         filtered_pcd.colors = o3d.utility.Vector3dVector(np.array(pcd.colors)[in_fov_indices])
     # coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=np.array(t))
     # o3d.visualization.draw([filtered_pcd,coordinate_frame],intrinsic_matrix=intrinsic_matrix,extrinsic_matrix=extrinsic_matrix)
+    return filtered_pcd
+
+def get_points_in_FoV(pcd, intrinsic_matrix, extrinsic_matrix, image_width, image_height):
+    far_near_plane = np.array([0, 10000])
+
+    # Transform point cloud to camera coordinate system
+    points_homogeneous = np.hstack((np.asarray(pcd.points), np.ones((len(pcd.points), 1))))  # shape is (n, 4)
+    camera_coord_points = extrinsic_matrix @ points_homogeneous.T  # shape is (4, n)
+    camera_coord_points = camera_coord_points[:3, :]  # shape is (3, n)
+
+    # Project points onto the image plane
+    projected_points = intrinsic_matrix @ camera_coord_points  # shape is (3, n)
+
+    # Identify valid points where Z > 0 to avoid division by zero
+    valid_indices = projected_points[2, :] > 0
+
+    # Normalize by the third (Z) component only for valid points
+    projected_points[0:2, valid_indices] /= projected_points[2, valid_indices]
+
+    # Now, filter points based on image dimensions and depth
+    in_fov_mask = (
+        (projected_points[0, valid_indices] >= 0) & (projected_points[0, valid_indices] < image_width) &
+        (projected_points[1, valid_indices] >= 0) & (projected_points[1, valid_indices] < image_height) &
+        (projected_points[2, valid_indices] > far_near_plane[0]) &
+        (projected_points[2, valid_indices] < far_near_plane[1])
+    )
+
+    # Get the indices of points that are both valid and in the field of view
+    final_indices = np.where(valid_indices)[0][in_fov_mask]
+
+    # Extract the filtered points and colors
+    filtered_points = np.asarray(pcd.points)[final_indices]
+    filtered_pcd = o3d.geometry.PointCloud()
+    filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points)
+
+    if len(pcd.colors) > 0:
+        filtered_colors = np.asarray(pcd.colors)[final_indices]
+        filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
+
     return filtered_pcd
 
 def randomly_add_points_in_point_cloud(N,min_bound,max_bound):
@@ -326,6 +365,11 @@ def get_pcd_data_FSVVD_downsampled(point_cloud_name='Chatting', trajectory_index
     pcd = o3d.io.read_point_cloud(FSVVD_file_path_downsample + f'{trajectory_index%300}_binary_downsampled.ply')
     return pcd
 
+def get_pcd_data_FSVVD_downsampled_fsvvd(point_cloud_name='Chatting', trajectory_index=0):
+    FSVVD_file_path_downsample = f'../point_cloud_data/processed_FSVVD/FSVVD_300_downsample/{point_cloud_name}/Filtered/'
+    pcd = o3d.io.read_point_cloud(FSVVD_file_path_downsample + f'{trajectory_index%300}_binary_downsampled.ply')
+    return pcd
+
 def get_pcd_data_binary(point_cloud_name='longdress', trajectory_index=0):
     # downsample and remove hidden points
     # 
@@ -438,6 +482,23 @@ def get_point_cloud_user_trajectory_FSVVD(pcd_name='Chatting', participant='HKY'
 
     return positions, orientations
 
+def get_point_cloud_user_trajectory_FSVVD_baseline(baseline='LSTM',pcd_name='Chatting', participant='HKY',history=90,future=150):
+    # ['Chatting','Pulling_trolley','News_interviewing','Sweep']
+    data_path = f"../point_cloud_data/{baseline}_pred_fsvvd/{pcd_name}/"
+    file_mapping = {
+        'Chatting': f'{participant}_{pcd_name}_resampled_pred{history}{future}.txt',
+        'Pulling_trolley': f'{participant}_{pcd_name}_resampled_pred{history}{future}.txt',
+        'News_interviewing': f'{participant}_{pcd_name}_resampled_pred{history}{future}.txt',
+        'Sweep': f'{participant}_{pcd_name}_resampled_pred{history}{future}.txt'
+    }
+    file_name = file_mapping[pcd_name]
+    # positions, orientations = parse_trajectory_data(data_path + file_name, user_index=participant)
+    ub_df = pd.read_csv(data_path + file_name, delim_whitespace=True)
+    positions = ub_df.loc[:, ['HeadX', 'HeadY', 'HeadZ']].values
+    orientations = ub_df.loc[:, ['HeadRX', 'HeadRY', 'HeadRZ']].values
+    # get the centroid of the positions
+
+    return positions, orientations
 
 def get_point_cloud_user_trajectory_LR(pcd_name='longdress', participant='P03_V1',history=90,future=30):
     data_path = "../point_cloud_data/LR_pred/"

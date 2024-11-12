@@ -358,7 +358,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     return train_x,train_y,test_x,test_y,val_x,val_y
 
 
-def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
+def get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # train_start = 1
     # train_end = 5
@@ -376,9 +376,10 @@ def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end
     val_y = np.array(val_y)
 
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
-    pcd_name_list = ['longdress','loot','redandblack','soldier']
+    pcd_name_list = ['Chatting','Pulling_trolley','News_interviewing','Sweep']
+    user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
     # column_name ['occlusion_feature']
-    def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
+    def get_train_test_data(pcd_name_list,p_start=0,p_end=11):
         # p_start = p_start + start_bias
         # p_end = p_end + end_bias
         print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
@@ -386,9 +387,10 @@ def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end
         for pcd_name in pcd_name_list:
             print(f'pcd_name:{pcd_name}')
             for user_i in tqdm(range(p_start,p_end)):
-                participant = 'P'+str(user_i).zfill(2)+'_V1'
+                # participant = 'P'+str(user_i).zfill(2)+'_V1'
+                participant = user_list[user_i]
                 # generate graph voxel grid features
-                prefix = f'{pcd_name}_VS{voxel_size}_per'
+                prefix = f'{pcd_name}_VS{voxel_size}'
                 node_feature_path = f'./data/{prefix}/{participant}node_feature.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
@@ -424,16 +426,20 @@ def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end
     # if data is saved, load it
     # clip = 600
     # print('clip:',clip)
-    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
+    # if path does not exist, create the path
+    if not os.path.exists(f'./data/{dataset}'):
+        os.makedirs(f'./data/{dataset}')
+
+    if os.path.exists(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
-        train_x = np.load(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy')
-        train_y = np.load(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy')
-        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy')
-        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy')
-        val_x = np.load(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy')
-        val_y = np.load(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy')
+        train_x = np.load(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy')
+        train_y = np.load(f'./data/{dataset}/all_videos_train_y{history}_{future}_{voxel_size}.npy')
+        test_x = np.load(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}.npy')
+        test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}.npy')
+        val_x = np.load(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy')
+        val_y = np.load(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy')
 
     else:
         print('generate data from files')
@@ -447,12 +453,12 @@ def get_train_test_data_on_users_all_videos_fsvvd(history,future,p_start=1,p_end
         val_x = val_x.astype(np.float32)
         val_y = val_y.astype(np.float32)
         # save data to file with prefix is all_videos
-        np.save(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
-        np.save(f'./data/data/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
-        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}.npy',test_x)
-        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}.npy',test_y)
-        np.save(f'./data/data/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
-        np.save(f'./data/data/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)
+        np.save(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
+        np.save(f'./data/{dataset}/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
+        np.save(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}.npy',test_x)
+        np.save(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}.npy',test_y)
+        np.save(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
+        np.save(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)
 
         print('data saved')
 

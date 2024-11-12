@@ -1,9 +1,9 @@
-import open3d as o3d
+# import open3d as o3d
 import warnings
 import pdb
 import os
 import numpy as np
-import open3d as o3d
+# import open3d as o3d
 import re
 import matplotlib.pyplot as plt
 import scipy.stats as stats
@@ -476,7 +476,7 @@ def generate_event_for_tgn(node_occlusion_feature_df,occupied_cell,cell2node):
 
 import os
 import numpy as np
-import open3d as o3d
+# import open3d as o3d
 
 
 def add_heatmap_on_pcd(pcd,heatmap_value):
