@@ -90,6 +90,31 @@ def mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end):
     # import pdb;pdb.set_trace()
     return outputs, batch_y
 
+def mask_outputs_batch_y_cut(outputs, batch_y,u,output_size,predict_index_end):
+    output_size = output_size
+    # import pdb;pdb.set_trace()
+    assert output_size == 1 or output_size == 2
+    mask = batch_y[:,u,:,0] != 0 # (batch_size, self.output_window, self.num_nodes)
+    # mask = mask.float() # (batch_size, self.output_window, self.num_nodes)
+    mask = mask.unsqueeze(-1) # (batch_size * self.output_window, self.num_nodes, 1)
+    # mask = mask.repeat(1, 1, 1, output_size) # (batch_size , self.output_window, self.num_nodes, output_size)            
+    
+
+    # import pdb;pdb.set_trace()
+    batch_y = batch_y[:,u,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
+    outputs = outputs[:,u,:,predict_index_end-output_size:predict_index_end]
+    # import pdb;pdb.set_trace()
+    mask = mask.expand_as(outputs)
+    outputs = outputs[mask]
+    batch_y = batch_y[mask]
+
+    # mask_a = mask
+    # outputs_a = outputs
+    # batch_y_a = batch_y
+    # print('after',mask_a[0,100,:,0],outputs_a[0,100,:,0],batch_y_a[0,100,:,0])
+    # import pdb;pdb.set_trace()
+    return outputs, batch_y
+
 def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predict_index_end=3,object_driven=False):
     # get val_loss
     mymodel.eval()
@@ -323,7 +348,7 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
     # if data is saved, load it
     # clip = 600
     # print('clip:',clip)
-    if os.path.exists(f'./data/data/dall_videos_train_x{history}_{future}_{voxel_size}.npy'):
+    if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data

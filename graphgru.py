@@ -16,7 +16,7 @@ from graphgru_eval import *
 # torch.set_default_device()
 # torch.set_default_tensor_type(torch.FloatTensor)
 def main(future=10):
-    with_train = True
+    with_train = False
     continue_train_early_stop_val = False
     user_previous_model = False # whether to load previous model
     if not with_train:
@@ -301,7 +301,7 @@ def main(future=10):
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
-    # for future in [150,60,30,10]:
-    for future in [1]:
+    for future in [150,60,30,10,1]:
+    # for future in [1]:
         print(f'future:{future}')
         main(future)

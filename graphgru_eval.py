@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torchmetrics import MeanAbsoluteError, MeanAbsolutePercentageError, MeanSquaredError
 import matplotlib.pyplot as plt
 from utils_graphgru import *
+from sklearn.metrics import r2_score
 
 def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
     mae = MeanAbsoluteError().cuda()
@@ -64,10 +65,12 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
     mae_list = []
     mape_list = []
     rmse_list = []
+    r2_score_list = []
     MAE = {}
     MAPE = {}
     MSE = {}
     RMSE = {}
+    R2_scre = {}
     # criterion = torch.nn.MSELoss()    
 
     for i in range(future):
@@ -75,12 +78,13 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
         MAPE[i] = 0
         MSE[i] = 0
         RMSE[i] = 0
+        R2_scre[i] = 0
 
     with torch.no_grad():
         # import pdb;pdb.set_trace()
 
         for i,(batch_x, batch_y) in enumerate (test_loader):
-            # assert i == 0 # batch size is equal to the test set size
+            assert i == 0 # batch size is equal to the test set size
 
             # import pdb;pdb.set_trace()
             # only predict last frame------
@@ -92,6 +96,31 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
             outputs = net(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
+
+    # -------------------mask the output and label to get the non-zero values
+            # outputs = outputs.unsqueeze(1).unsqueeze(-1)
+            # batch_y = batch_y.unsqueeze(1).unsqueeze(-1)
+            # batch_y = batch_y.unsqueeze(1)
+            # import pdb;pdb.set_trace()
+            outputs_copy = outputs.repeat(1,future,1,7).clone()
+            batch_y_copy = batch_y.repeat(1,future,1,1).clone()
+            # import pdb;pdb.set_trace()
+            pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(outputs_copy,batch_y_copy, future-1, output_size, predict_index_end)
+            # import pdb;pdb.set_trace()
+            # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
+            # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
+            mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
+            print(f'MSE_non_zero-o:{mse_non_zero}')
+            std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
+            print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+            # import pdb;pdb.set_trace()
+            r2_score_non_zero = r2_score(test_y_o_non_zero.cpu().detach(), pred_y_o_non_zero.cpu().detach())
+            print(f'R² Score (Non-Zero): {r2_score_non_zero}')
+            del outputs_copy,batch_y_copy,pred_y_o_non_zero,test_y_o_non_zero
+    # -------------------    
+
+
+
             # -------------
             if predict_index_end==3:
                 outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
@@ -116,17 +145,37 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
                 # MSE_d=mse(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
                 MSE_d = mse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
                 RMSE_d = rmse(outputs[:, u, :, :].contiguous(), batch_y[:, u, :, :].contiguous()).cpu().detach().numpy()
+                R2_score_d = r2_score(batch_y[:, u, :, :].contiguous().cpu().detach().view(-1).numpy(),outputs[:, u, :, :].contiguous().cpu().detach().view(-1).numpy())
+                y_pred = outputs[:, u, :, :].contiguous().cpu().detach().view(-1)
+                y_true = batch_y[:, u, :, :].contiguous().cpu().detach().view(-1)
+                squared_errors = (y_true - y_pred) ** 2
+                std_squared_errors = torch.std(squared_errors)
+
+                # y_true_non_zero is the true values that are not zero
+                y_true_non_zero = y_true[y_true != 0]
+                y_pred_non_zero = y_pred[y_true != 0]
+                squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
+                std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
+                mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
+                print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+                print(f'mse_non_zero-v:{mse_non_zero}')
+                print(f'std_squared_errors:{std_squared_errors}')
+                # import pdb;pdb.set_trace()
+
 
                 MAE[u] += MAE_d
                 MAPE[u] += MAPE_d
                 MSE[u] += MSE_d
                 RMSE[u] += RMSE_d
+                R2_scre[u] += R2_score_d
         for u in range(outputs.shape[1]):
             MAE_u = MAE[u]/(i+1)
             MAPE_u = MAPE[u]/(i+1)
             MSE_u = MSE[u]/(i+1)
             RMSE_u = RMSE[u]/(i+1)
-            print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f, RMSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u,RMSE_u))
+            R2_scre_u = R2_scre[u]/(i+1)
+            # print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f, RMSE: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u,RMSE_u))
+            # print("TIME:%d ,MAE:%1.5f,  MAPE: %1.5f, MSE: %1.5f, RMSE: %1.5f, R2_score: %1.5f" % ((u+1),MAE_u, MAPE_u,MSE_u,RMSE_u,R2_scre_u))
         # import pdb;pdb.set_trace()
         # if u==149:
         #     for sample in range(0,batch_x.shape[0],100):
@@ -140,27 +189,31 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             mae_list.append(MAE_u)
             mape_list.append(MAPE_u)
             rmse_list.append(RMSE_u)
+            r2_score_list.append(R2_scre_u)
 
         print('MSE:',mse_list)
         print('MAE:',mae_list)
         print('RMSE:',rmse_list)
+        print('R2_score:',r2_score_list)
+
+    
         # print('MAPE:',mape_list)
         # plot mse and mae
-        plt.figure()
-        if len(mse_list) == 1:
-            plt.scatter(future, mse_list[0])
-        else:
-            plt.plot(mse_list)
+        # plt.figure()
+        # if len(mse_list) == 1:
+        #     plt.scatter(future, mse_list[0])
+        # else:
+        #     plt.plot(mse_list)
 
-        if len(mae_list) == 1:
-            plt.scatter(future, mae_list[0])
-        else:
-            plt.plot(mae_list)
-        # plt.plot(mape_list)
-        plt.legend(['MSE', 'MAE'])
-        plt.xlabel('Prediction Horizon/frame')
-        plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/p90_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
+        # if len(mae_list) == 1:
+        #     plt.scatter(future, mae_list[0])
+        # else:
+        #     plt.plot(mae_list)
+        # # plt.plot(mape_list)
+        # plt.legend(['MSE', 'MAE'])
+        # plt.xlabel('Prediction Horizon/frame')
+        # plt.ylabel('Loss')
+        # plt.savefig(f'./data/fig/p90_vs128_graphgru_{model_prefix}_testingloss{history}_{future}.png') 
 
 
 def eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=90,future=60):

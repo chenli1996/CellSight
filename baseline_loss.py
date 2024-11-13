@@ -14,6 +14,7 @@ import os
 from utils_graphgru import *
 import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
+from sklearn.metrics import r2_score
 torch.set_default_dtype(torch.float32)
 
 def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
@@ -285,7 +286,7 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
     # clip = 600
     # print('clip:',clip)
     # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
-    if os.path.exists(f'./data/data/ddall_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy'):
+    if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy'):
         print('load data from file')
         # add future history in the file name
         # add new directory data/data
@@ -494,7 +495,7 @@ def compute_r2_per_sample(y_true, y_pred):
     return r2_scores
 
 dataset = '8i'
-# dataset = 'fsvvd_full'
+dataset = 'fsvvd_full'
 
 
 baseline = 'LSTM'
@@ -535,8 +536,8 @@ history=90
 predict_end_index = 3 #visibility
 output_size = 1
 
-for future in [1]:
-# for future in [150,60,30,10,1]:
+# for future in [150]:
+for future in [150,60,30,10,1]:
 # for future in [1]:
     print(f'history:{history},future:{future}')
     output_size = 1
@@ -571,7 +572,7 @@ for future in [1]:
     mae = MeanAbsoluteError()
     mape=MeanAbsolutePercentageError()
     mse=MeanSquaredError()
-    r2_score = R2Score()
+    # r2_score = R2Score()
     if torch.cuda.is_available():
         mae = mae.to('cuda')
         mape = mape.to('cuda')
@@ -599,28 +600,71 @@ for future in [1]:
     
     MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
     # Calculate the squared errors
-    squared_errors = (
-        test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
-        test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
-    ) ** 2
+    # squared_errors = (
+    #     test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
+    #     test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
+    # ) ** 2
 
     # Flatten the squared errors if needed
-    squared_errors = squared_errors.view(-1)
+    # squared_errors = squared_errors.view(-1)
 
     # Compute the variance of the squared errors
-    variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
+    # variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
 
-    print("Variance of the prediction loss:", variance)
+    # print("Variance of the prediction loss:", variance)
     # Flatten the tensors
     y_true = test_y[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
     y_pred = test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
+    squared_errors = (y_true - y_pred) ** 2
+    std_squared_errors = torch.std(squared_errors)
+    print("Standard Deviation of Squared Errors:", std_squared_errors.item())
+
+    
 
     # Compute R² score
     # Compute per-sample R² scores
-    r2_scores = compute_r2_per_sample(y_true, y_pred)
+    # r2_scores = compute_r2_per_sample(y_true, y_pred)
+
     # import pdb;pdb.set_trace()
     # Compute the final R² score
-    final_r2_score = r2_scores.mean().item()
+    final_r2_score = r2_score(y_true.cpu().view(-1), y_pred.cpu().view(-1))
+    # import pdb;pdb.set_trace()
+    
+    # Calculate the mean of y_true
+    # y_true_mean = torch.mean(y_true)
+
+    # # Calculate the total sum of squares (SS_tot) and the residual sum of squares (SS_res)
+    # ss_tot = torch.sum((y_true - y_true_mean) ** 2)
+    # ss_res = torch.sum((y_true - y_pred) ** 2)
+
+    # Calculate R^2 score
+    # r2_manual = 1 - (ss_res / ss_tot)
+    # print("R^2 Score (Manual):", r2_manual)
+
+    # only get non-empty cells
+    # import pdb;pdb.set_trace()
+    pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(test_y_TLR,test_y, u, output_size, predict_end_index)
+    # import pdb;pdb.set_trace()
+    # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
+    # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
+    mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
+    print(f'MSE_non_zero-o:{mse_non_zero}')
+    std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
+    print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+    r2_score_non_zero = r2_score(test_y_o_non_zero.cpu(), pred_y_o_non_zero.cpu())
+    print(f'R² Score (Non-Zero): {r2_score_non_zero}')
+
+
+    # y_true_non_zero is the true values that are not zero
+    y_true_non_zero = y_true[y_true != 0]
+    y_pred_non_zero = y_pred[y_true != 0]
+    squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
+    std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
+    mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
+    print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+    print(f'mse_non_zero-v:{mse_non_zero}')
+
+
     MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
     print(f'MSE:{MSE_d},MAE:{MAE_d}, R² Score: {final_r2_score}',f'history:{history},future:{future}')
     # get the var of test_y[:,u,:,2:3] after masking off all zeros
