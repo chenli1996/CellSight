@@ -1,8 +1,0 @@
-/ext3/miniconda3/envs/myenv/lib/python3.9/site-packages/torch/__init__.py:696: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:451.)
-  _C._set_default_tensor_type(t)
-  0%|          | 0/15 [00:00<?, ?it/s]  0%|          | 0/15 [00:00<?, ?it/s]
-feature_num: 7
-Traceback (most recent call last):
-  File "/scratch/cl5089/point_cloud_FoV_Graph/graphgru.py", line 117, in <module>
-    x=x.reshape(feature_num,150,240)
-ValueError: cannot reshape array of size 356160 into shape (7,150,240)

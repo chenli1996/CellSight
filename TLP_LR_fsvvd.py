@@ -1,3 +1,4 @@
+from ast import main
 from re import X
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import os
 import copy
 from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import LinearRegression
 import random
 # Function to set the seed for reproducibility
 def set_seed(seed):
@@ -25,11 +27,124 @@ def set_seed(seed):
 # Set the seed at the beginning of your script
 set_seed(42)
 
-# MLP Model Definition
-# Function to build a simple MLP model
-def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=False, early_stopping=True)
-    return model
+def latest_monotonic_sequence(sequence):
+    """ Finds the latest monotonically increasing or decreasing subsequence in a 1D array """
+    n = len(sequence)
+    if n == 0:
+        return np.array([]), np.array([])
+    
+    # Start from the last element and look backwards
+    last_idx = n - 1
+    indices = [last_idx]
+    values = [sequence[last_idx]]
+    
+    # Determine if the sequence is increasing or decreasing
+    is_increasing = sequence[last_idx - 1] < sequence[last_idx] if last_idx > 0 else True
+    
+    for i in range(last_idx - 1, -1, -1):
+        if (is_increasing and sequence[i] <= sequence[i + 1]) or \
+           (not is_increasing and sequence[i] >= sequence[i + 1]):
+            indices.append(i)
+            values.append(sequence[i])
+        else:
+            break
+    
+    # Reverse to make the sequence and indices in ascending order
+    indices.reverse()
+    values.reverse()
+    
+    return np.array(indices), np.array(values)
+
+
+def truncate_linear_regression(history_sequence, future_steps):
+    # Extract the latest monotonically increasing subsequence
+    indices, values = latest_monotonic_sequence(history_sequence)
+
+    # Reshape indices for sklearn
+    indices = np.array(indices).reshape(-1, 1)
+
+    # Create and train the model
+    model = LinearRegression()
+    model.fit(indices, values)
+
+    # Number of future steps to predict
+    # future_steps = 3
+    # Create future indices array from the last index of monotonically increasing sequence
+    future_indices = np.arange(indices[-1, 0] + 1, indices[-1, 0] + 1 + future_steps).reshape(-1, 1)
+
+    # Predict future values
+    future_values = model.predict(future_indices)
+    # print(f"Future values for the next {future_steps} steps: {future_values}")
+    return future_values
+
+
+def predict_next_state_tlp(user_data, window_size=2,dof=6,future_steps = 1):
+    """
+    Predicts the next state based on the last 'window_size' states using linear regression.
+    
+    Args:
+    - user_data: numpy array of shape (n, 6), where n is the number of timesteps,
+                 and 6 represents the 6 DoF (x, y, z, yaw, pitch, roll).
+    - window_size: int, the number of states to consider for the prediction
+    
+    Returns:
+    - next_state: numpy array of shape (6,), representing the predicted next state.
+    """
+    if user_data.shape[0] < window_size:
+        raise ValueError("Not enough data for prediction.")
+    
+    next_state = np.zeros(dof)
+    time_steps = np.arange(window_size)
+    
+    # Perform linear regression on each DoF using the last 'window_size' states
+    for i in range(dof):
+        # m, c = linear_regression(time_steps, user_data[-window_size:, i])
+        # next_state[i] = m * (window_size+future_steps-1) + c  # Predict the next state
+        future_values = truncate_linear_regression(user_data[-window_size:, i], future_steps)
+        next_state[i] = future_values[-1]
+    
+    return next_state
+
+def linear_regression(x, y):
+    """
+    Computes the coefficients of a linear regression y = mx + c using least squares.
+    
+    Args:
+    - x: numpy array of shape (n,), the independent variable
+    - y: numpy array of shape (n,), the dependent variable
+    
+    Returns:
+    - m: Slope of the fitted line
+    - c: Intercept of the fitted line
+    """
+    A = np.vstack([x, np.ones(len(x))]).T
+    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    return m, c
+
+def predict_next_state_lp(user_data, window_size=2,dof=6,future_steps = 1):
+    """
+    Predicts the next state based on the last 'window_size' states using linear regression.
+    
+    Args:
+    - user_data: numpy array of shape (n, 6), where n is the number of timesteps,
+                 and 6 represents the 6 DoF (x, y, z, yaw, pitch, roll).
+    - window_size: int, the number of states to consider for the prediction
+    
+    Returns:
+    - next_state: numpy array of shape (6,), representing the predicted next state.
+    """
+    if user_data.shape[0] < window_size:
+        raise ValueError("Not enough data for prediction.")
+    
+    next_state = np.zeros(dof)
+    time_steps = np.arange(window_size)
+    
+    # Perform linear regression on each DoF using the last 'window_size' states
+    for i in range(dof):
+        m, c = linear_regression(time_steps, user_data[-window_size:, i])
+        next_state[i] = m * (window_size+future_steps-1) + c  # Predict the next state
+    
+    return next_state
 
 # Function to read individual user-video data
 def read_user_video_data(user, video_name):
@@ -75,6 +190,7 @@ def convert_to_sin_cos(data):
 def convert_back_to_angles(sin_cos_row):
     angles = []
     for i in range(3):  # Iterate over yaw, pitch, roll sin-cos pairs
+        # import pdb; pdb.set_trace()
         sin_data = sin_cos_row[i*2 + 3]
         cos_data = sin_cos_row[i*2 + 4]
         rad_data = np.arctan2(sin_data, cos_data)
@@ -102,9 +218,9 @@ def get_train_test_data(df, window_size=10, future_steps=30, downsample_factor=1
         window_data = data[i-window_size:i, :]
         future_data = data[i+future_steps-1, :]
 
-        window_data_transformed = convert_to_sin_cos(window_data)
+        window_data_transformed = convert_to_sin_cos(window_data) # [y,p,r] => [siny, cosy, sinp, cosp, sinr, cosr]
         future_data_transformed = convert_to_sin_cos(future_data[np.newaxis, :])
-
+        # import pdb; pdb.set_trace()
         X.append(window_data_transformed)
         y.append(future_data_transformed[0])  # Flatten here by taking the first (and only) entry
 
@@ -179,7 +295,7 @@ def evaluate_model(model, test_loader):
     return mse, y_pred
 
 # Main function
-def main(future_steps):
+def main_tlp(future_steps):
     window_size = 90
     downsample_factor = 2  # For 30 FPS
 
@@ -222,29 +338,97 @@ def main(future_steps):
     X_val = X_val.reshape((X_val.shape[0], -1))
 
 
-    # Convert data to PyTorch tensors
-    train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
-    val_dataset = TensorDataset(torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.float32))
+    # Process test data per user
+    for user in test_users:
+        print(f"Processing predictions for user: {user}")
 
+        user_test_data = test_data[test_data['User'] == user].copy().reset_index(drop=True)
 
+        X_test, y_test, sample_indices = get_train_test_data(user_test_data, window_size=window_size,
+                                             future_steps=future_steps, downsample_factor=downsample_factor)
 
-    batch_size = 128
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        if len(X_test) == 0:
+            print(f"No test data for user {user} after applying window_size and future_steps.")
+            continue
+        # import pdb; pdb.set_trace()
 
-    
+        # X_test shape is (n_samples, window_size, 9)
 
-    # model = MLPModel(input_size, hidden_size, output_size, num_layers=2).to(device)
+        # mse, y_pred = evaluate_model(model, test_loader)
+        # X_test = X_test.reshape((X_test.shape[0], -1)) # shape is (n_samples, window_size*9)
+        y_pred = np.zeros((X_test.shape[0], 9))
+        for i in range(X_test.shape[0]):
+            y_pred_i = predict_next_state_tlp(X_test[i], window_size=window_size,dof=9,future_steps=future_steps)
+            y_pred[i] = y_pred_i
+        
+        # import pdb; pdb.set_trace()
+        # y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
+        print(f"User: {user}, Mean Squared Error: {mse}")
+        # import pdb; pdb.set_trace()
+        y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
+        # import pdb; pdb.set_trace()
 
-    # model = train_model(model, train_loader, val_loader)
-    model = build_mlp_model()
+        # Map predictions back to original data structure
+        # Build a DataFrame with the same structure as the original data
+        pred_df = user_test_data.copy()
+        # import pdb; pdb.set_trace()
+        # set all values to 0
+        pred_df.loc[:, ['HeadX', 'HeadY', 'HeadZ', 'HeadRX', 'HeadRY', 'HeadRZ']] = 0
+
+        # Fill in the predicted values at the corresponding indices
+        pred_df.loc[sample_indices, ['HeadX', 'HeadY', 'HeadZ', 'HeadRX', 'HeadRY', 'HeadRZ']] = y_pred_transformed
+
+        # Save predictions
+        pred_file_path = f"../point_cloud_data/TLP_pred_fsvvd/{test_videos[0]}/"
+        if not os.path.exists(pred_file_path):
+            os.makedirs(pred_file_path)
+
+        pred_file_name = f"{user}_{test_videos[0]}_resampled_pred{window_size}{future_steps}.txt"
+
+        pred_df.to_csv(os.path.join(pred_file_path, pred_file_name), sep='\t', index=False)
+
+def main_lr(future_steps,window_size=90):
+    downsample_factor = 2  # For 30 FPS
+
+    # Define all users and videos
+    all_videos = ['Chatting', 'Pulling_trolley', 'News_interviewing', 'Sweep']
+    all_users = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen',
+                 'Sunqiran', 'WangYan', 'fupingyu', 'huangrenyi', 'liuxuya', 'sulehan', 'yuchen']
+
+    # Read and combine all data
+    combined_df = read_all_data(all_users, all_videos)
+
+    # Define train, validation, and test videos
+    train_videos = ['Chatting', 'Pulling_trolley', 'News_interviewing']
+    val_videos = ['Sweep']
+    test_videos = ['Sweep']
+
+    # Split data by video
+    train_data, val_data, test_data = split_data_by_video(combined_df, train_videos, val_videos, test_videos)
+
+    # Further split 'Sweep' video data into validation and test sets by users
+    val_users = all_users[6:]
+    test_users = all_users[:6]
+
+    val_data = val_data[val_data['User'].isin(val_users)]
+    test_data = test_data[test_data['User'].isin(test_users)]
+
+    # Prepare training and validation data
+    X_train, y_train,_ = get_train_test_data(train_data, window_size=window_size,
+                                           future_steps=future_steps, downsample_factor=downsample_factor)
     # import pdb; pdb.set_trace()
-    model.fit(X_train, y_train)
-    # model = train_model(model, X_train, y_train)
-    y_pred = model.predict(X_test)
+    X_val, y_val,_ = get_train_test_data(val_data, window_size=window_size,
+                                       future_steps=future_steps, downsample_factor=downsample_factor)
+    
+    X_test, y_test, _ = get_train_test_data(test_data, window_size=window_size,
+                                             future_steps=future_steps, downsample_factor=downsample_factor)
 
-    mse = mean_squared_error(y_test, y_pred)
-    print(f'Mean Squared Error: {mse}')
+
+    X_train = X_train.reshape((X_train.shape[0], -1))
+    X_test = X_test.reshape((X_test.shape[0], -1))
+    X_val = X_val.reshape((X_val.shape[0], -1))
+
 
     # Process test data per user
     for user in test_users:
@@ -258,20 +442,24 @@ def main(future_steps):
         if len(X_test) == 0:
             print(f"No test data for user {user} after applying window_size and future_steps.")
             continue
+        # import pdb; pdb.set_trace()
 
-        # Convert data to PyTorch tensors
-        test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        # X_test shape is (n_samples, window_size, 9)
 
         # mse, y_pred = evaluate_model(model, test_loader)
-        X_test = X_test.reshape((X_test.shape[0], -1))
+        # X_test = X_test.reshape((X_test.shape[0], -1)) # shape is (n_samples, window_size*9)
+        y_pred = np.zeros((X_test.shape[0], 9))
+        for i in range(X_test.shape[0]):
+            y_pred_i = predict_next_state_lp(X_test[i], window_size=window_size,dof=9,future_steps=future_steps)
+            y_pred[i] = y_pred_i
+        
 
-        y_pred = model.predict(X_test)
-        import pdb; pdb.set_trace()
+        # y_pred = model.predict(X_test)
         mse = mean_squared_error(y_test, y_pred)
         print(f"User: {user}, Mean Squared Error: {mse}")
         # import pdb; pdb.set_trace()
         y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
+        # import pdb; pdb.set_trace()
 
         # Map predictions back to original data structure
         # Build a DataFrame with the same structure as the original data
@@ -284,7 +472,7 @@ def main(future_steps):
         pred_df.loc[sample_indices, ['HeadX', 'HeadY', 'HeadZ', 'HeadRX', 'HeadRY', 'HeadRZ']] = y_pred_transformed
 
         # Save predictions
-        pred_file_path = f"../point_cloud_data/MLP_pred_fsvvd/{test_videos[0]}/"
+        pred_file_path = f"../point_cloud_data/LR_pred_fsvvd/{test_videos[0]}/"
         if not os.path.exists(pred_file_path):
             os.makedirs(pred_file_path)
 
@@ -292,8 +480,15 @@ def main(future_steps):
 
         pred_df.to_csv(os.path.join(pred_file_path, pred_file_name), sep='\t', index=False)
 
+
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    for window_size in [30, 90]:
+        for future_steps in [1, 10, 30, 60, 150]:
+            print(f"Future Steps: {future_steps}, Window Size: {window_size}")
+            main_lr(future_steps,window_size=window_size)
+
     for future_steps in [1, 10, 30, 60, 150]:
         print(f"Future Steps: {future_steps}")
-        main(future_steps)
+        main_tlp(future_steps)            

@@ -243,7 +243,7 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
     # test_end = 26 -3
     # val_start = 27
     # val_end = 28
-    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
     # column_name ['occlusion_feature']
@@ -392,7 +392,7 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
     val_x = np.array(val_x)
     val_y = np.array(val_y)
 
-    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['Chatting','Pulling_trolley','News_interviewing','Sweep']
     user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
     # column_name ['occlusion_feature']
@@ -494,199 +494,222 @@ def compute_r2_per_sample(y_true, y_pred):
 
     return r2_scores
 
-dataset = '8i'
-dataset = 'fsvvd_full'
+def baseline_loss_eval(dataset,baseline,predict_end_index,history):
+    # dataset = '8i'
+    # dataset = 'fsvvd_raw'
+    # baseline = 'LSTM'
+    # baseline = 'MLP'
+    # predict_end_index = 4 # 2 infov, 3 visibility, 4 resolution
 
+    print(f'dataset:{dataset}, baseline:{baseline}, predict_end_index:{predict_end_index}')
+    if dataset == 'fsvvd_raw':
+        voxel_size = 0.6
+        p_start = 0
+        p_end = 11
+        edge_prefix = str(voxel_size) + 'fsvvd_raw'
+    elif dataset == 'fsvvd_filtered':
+        voxel_size = 0.4
+        p_start = 0
+        p_end = 11
+        edge_prefix = str(voxel_size) + 'fsvvd_filtered'
+    elif dataset == '8i':
+        voxel_size = 128
+        p_start = 1
+        p_end = 28
+        edge_prefix = str(voxel_size)
 
-baseline = 'LSTM'
-# baseline = 'MLP'
+    if voxel_size == 128:
+        num_nodes = 240
+    elif voxel_size == 64:
+        num_nodes = 1728
+    elif voxel_size == 0.6: # fsvvd full raw
+        num_nodes = 280
+    # elif voxel_size == 0.4:
+    else:
+        num_nodes = None
 
-if dataset == 'fsvvd_full':
-    voxel_size = 0.6
-    p_start = 0
-    p_end = 11
-    edge_prefix = str(voxel_size) + 'fsvvd_raw'
-elif dataset == 'fsvvd_filtered':
-    voxel_size = 0.4
-    p_start = 0
-    p_end = 11
-    edge_prefix = str(voxel_size) + 'fsvvd_filtered'
-elif dataset == '8i':
-    voxel_size = 128
-    p_start = 1
-    p_end = 28
-    edge_prefix = str(voxel_size)
+    # history = 10
+    # for future in [1,10,30,60]:
+    history=90
+    # for future in [1,10,30,60]:
+    # history = 30
+    # predict_end_index = 2 #infov
 
-if voxel_size == 128:
-    num_nodes = 240
-elif voxel_size == 64:
-    num_nodes = 1728
-elif voxel_size == 0.6: # fsvvd full raw
-    num_nodes = 280
-# elif voxel_size == 0.4:
-else:
-    num_nodes = None
-
-# history = 10
-# for future in [1,10,30,60]:
-history=90
-# for future in [1,10,30,60]:
-# history = 30
-# predict_end_index = 2 #infov
-predict_end_index = 3 #visibility
-output_size = 1
-
-# for future in [150]:
-for future in [150,60,30,10,1]:
-# for future in [1]:
-    print(f'history:{history},future:{future}')
     output_size = 1
-    if dataset == '8i':
-        train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-    else:
-        train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
 
-    del train_x,train_y,val_x,val_y,test_x
-    # test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-    # del test_x_LR
-    # print('shape of test_y:',test_y.shape,'shape of test_y_LR:',test_y_LR.shape)
-    # test_y = torch.from_numpy(test_y)
-    # test_y_LR = torch.from_numpy(test_y_LR)
-    if dataset == '8i':
-        # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_TLR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_MLP(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-    else:
-        test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start,p_end,voxel_size,num_nodes)
-    del test_x_TLR
-    print('shape of test_y:',test_y.shape,'shape of test_y_TLR:',test_y_TLR.shape)
-    # import pdb;pdb.set_trace()
-    test_y = torch.from_numpy(test_y)
-    test_y_TLR = torch.from_numpy(test_y_TLR)
+    mse_list = []
+    R2_score_list = []
+
+    # for future in [150]:
+    # for future in [150,60,30,10,1]:
+    for future in [1,10,30,60,150]:
+    # for future in [1]:
+        print(f'history:{history},future:{future}')
+        output_size = 1
+        # load ground truth data
+        if dataset == '8i':
+            train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        else:
+            train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+
+        del train_x,train_y,val_x,val_y,test_x
+        # test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        # del test_x_LR
+        # print('shape of test_y:',test_y.shape,'shape of test_y_LR:',test_y_LR.shape)
+        # test_y = torch.from_numpy(test_y)
+        # test_y_LR = torch.from_numpy(test_y_LR)
+        if dataset == '8i':
+            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_TLR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_MLP(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+            test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+        else:
+            test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start,p_end,voxel_size,num_nodes)
+        del test_x_TLR
+        print('shape of test_y:',test_y.shape,'shape of test_y_TLR:',test_y_TLR.shape)
+        # import pdb;pdb.set_trace()
+        test_y = torch.from_numpy(test_y)
+        test_y_TLR = torch.from_numpy(test_y_TLR)
 
 
 
-    # get mse mae loss for LR on test data
-    mae = MeanAbsoluteError()
-    mape=MeanAbsolutePercentageError()
-    mse=MeanSquaredError()
-    # r2_score = R2Score()
-    if torch.cuda.is_available():
-        mae = mae.to('cuda')
-        mape = mape.to('cuda')
-        mse = mse.to('cuda')
-        test_y = test_y.to('cuda')
-        # test_y_LR = test_y_LR.to('cuda')
-        test_y_TLR = test_y_TLR.to('cuda')
-    MAE_list = []
-    MSE_list = []
-    u=future-1
-    # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_end_index)
-    # test_y_TLR,test_y = mask_outputs_batch_y(test_y_TLR, test_y,output_size,predict_end_index)
-    # import pdb;pdb.set_trace()
-    # get a large loss for TLR
-    # for i in range(0,test_y.size(0),1):
-    #     # import pdb;pdb.set_trace()
-    #     if i==553:
-    #         print('TLR',test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
-    #         print('gt',test_y[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
-    #     MSE = mse(test_y[i, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()
-    #     MAE = mae(test_y[i, u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[i,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
-    #     # import pdb;pdb.set_trace()
-    #     if abs(MSE-0.138) < 0.1 and MAE>0.2:
-    #         print(f'MSE:{MSE},MAE:{MAE}',f'index:{i}')
+        # get mse mae loss for LR on test data
+        mae = MeanAbsoluteError()
+        mape=MeanAbsolutePercentageError()
+        mse=MeanSquaredError()
+        # r2_score = R2Score()
+        if torch.cuda.is_available():
+            mae = mae.to('cuda')
+            mape = mape.to('cuda')
+            mse = mse.to('cuda')
+            test_y = test_y.to('cuda')
+            # test_y_LR = test_y_LR.to('cuda')
+            test_y_TLR = test_y_TLR.to('cuda')
+        MAE_list = []
+        MSE_list = []
+        u=future-1
+        # outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_end_index)
+        # test_y_TLR,test_y = mask_outputs_batch_y(test_y_TLR, test_y,output_size,predict_end_index)
+        # import pdb;pdb.set_trace()
+        # get a large loss for TLR
+        # for i in range(0,test_y.size(0),1):
+        #     # import pdb;pdb.set_trace()
+        #     if i==553:
+        #         print('TLR',test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
+        #         print('gt',test_y[i, u, :, predict_end_index-output_size:predict_end_index].view(30,8))
+        #     MSE = mse(test_y[i, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[i, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()
+        #     MAE = mae(test_y[i, u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[i,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+        #     # import pdb;pdb.set_trace()
+        #     if abs(MSE-0.138) < 0.1 and MAE>0.2:
+        #         print(f'MSE:{MSE},MAE:{MAE}',f'index:{i}')
+        
+        MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
+        # Calculate the squared errors
+        # squared_errors = (
+        #     test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
+        #     test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
+        # ) ** 2
+
+        # Flatten the squared errors if needed
+        # squared_errors = squared_errors.view(-1)
+
+        # Compute the variance of the squared errors
+        # variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
+
+        # print("Variance of the prediction loss:", variance)
+        # Flatten the tensors
+        y_true = test_y[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
+        y_pred = test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
+        squared_errors = (y_true - y_pred) ** 2
+        std_squared_errors = torch.std(squared_errors)
+        print("Standard Deviation of Squared Errors:", std_squared_errors.item())
+
+        
+
+        # Compute R² score
+        # Compute per-sample R² scores
+        # r2_scores = compute_r2_per_sample(y_true, y_pred)
+
+        # import pdb;pdb.set_trace()
+        # Compute the final R² score
+        final_r2_score = r2_score(y_true.cpu().view(-1), y_pred.cpu().view(-1))
+        # import pdb;pdb.set_trace()
+        
+        # Calculate the mean of y_true
+        # y_true_mean = torch.mean(y_true)
+
+        # # Calculate the total sum of squares (SS_tot) and the residual sum of squares (SS_res)
+        # ss_tot = torch.sum((y_true - y_true_mean) ** 2)
+        # ss_res = torch.sum((y_true - y_pred) ** 2)
+
+        # Calculate R^2 score
+        # r2_manual = 1 - (ss_res / ss_tot)
+        # print("R^2 Score (Manual):", r2_manual)
+
+        # only get non-empty cells
+        # import pdb;pdb.set_trace()
+        pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(test_y_TLR,test_y, u, output_size, predict_end_index)
+        # import pdb;pdb.set_trace()
+        # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
+        # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
+        mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
+        print(f'MSE_non_zero-o:{mse_non_zero}')
+        std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
+        print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+        r2_score_non_zero = r2_score(test_y_o_non_zero.cpu(), pred_y_o_non_zero.cpu())
+        print(f'R² Score (Non-Zero): {r2_score_non_zero}')
+
+
+        # y_true_non_zero is the true values that are not zero
+        y_true_non_zero = y_true[y_true != 0]
+        y_pred_non_zero = y_pred[y_true != 0]
+        squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
+        std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
+        mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
+        print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+        print(f'mse_non_zero-v:{mse_non_zero}')
+
+
+        MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
+        print(f'MSE:{MSE_d},MAE:{MAE_d}, R² Score: {final_r2_score}',f'history:{history},future:{future}')
+        # import pdb;pdb.set_trace()
+        mse_list.append(round(MSE_d.item(),4))
+        R2_score_list.append(round(final_r2_score,3))
+
+
+        # get the var of test_y[:,u,:,2:3] after masking off all zeros
+        # test_y = test_y_TLR
+        # test_y = test_y.cpu().detach().numpy()
+        # test_y = test_y[:,u,:,2:3]
+        # mask = test_y != 0
+        # test_y = test_y[mask]
+        # var = np.var(test_y)
+        # # get the distrubution result of test_y
+        # plt.hist(test_y.ravel(),bins=100)
+        # plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
+
+        # print(f'var:{var},history:{history},future:{future}')
+
+
+        del test_y,test_y_TLR
+    print(f'dataset:{dataset},baseline:{baseline},predict_end_index:{predict_end_index}')
+    print(f'MSE_list:{mse_list},R2_score_list:{R2_score_list}')
+
+
+
+
+if __name__ == '__main__':
+    for dataset in ['8i','fsvvd_raw']:
+        for baseline in ['MLP','TLP','LR']:
+            for predict_end_index in [2,3,4]:
+                baseline_loss_eval(dataset,baseline,predict_end_index,history=90)
     
-    MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
-    # Calculate the squared errors
-    # squared_errors = (
-    #     test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
-    #     test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
-    # ) ** 2
-
-    # Flatten the squared errors if needed
-    # squared_errors = squared_errors.view(-1)
-
-    # Compute the variance of the squared errors
-    # variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
-
-    # print("Variance of the prediction loss:", variance)
-    # Flatten the tensors
-    y_true = test_y[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
-    y_pred = test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
-    squared_errors = (y_true - y_pred) ** 2
-    std_squared_errors = torch.std(squared_errors)
-    print("Standard Deviation of Squared Errors:", std_squared_errors.item())
-
-    
-
-    # Compute R² score
-    # Compute per-sample R² scores
-    # r2_scores = compute_r2_per_sample(y_true, y_pred)
-
-    # import pdb;pdb.set_trace()
-    # Compute the final R² score
-    final_r2_score = r2_score(y_true.cpu().view(-1), y_pred.cpu().view(-1))
-    # import pdb;pdb.set_trace()
-    
-    # Calculate the mean of y_true
-    # y_true_mean = torch.mean(y_true)
-
-    # # Calculate the total sum of squares (SS_tot) and the residual sum of squares (SS_res)
-    # ss_tot = torch.sum((y_true - y_true_mean) ** 2)
-    # ss_res = torch.sum((y_true - y_pred) ** 2)
-
-    # Calculate R^2 score
-    # r2_manual = 1 - (ss_res / ss_tot)
-    # print("R^2 Score (Manual):", r2_manual)
-
-    # only get non-empty cells
-    # import pdb;pdb.set_trace()
-    pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(test_y_TLR,test_y, u, output_size, predict_end_index)
-    # import pdb;pdb.set_trace()
-    # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
-    # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
-    mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
-    print(f'MSE_non_zero-o:{mse_non_zero}')
-    std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
-    print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
-    r2_score_non_zero = r2_score(test_y_o_non_zero.cpu(), pred_y_o_non_zero.cpu())
-    print(f'R² Score (Non-Zero): {r2_score_non_zero}')
-
-
-    # y_true_non_zero is the true values that are not zero
-    y_true_non_zero = y_true[y_true != 0]
-    y_pred_non_zero = y_pred[y_true != 0]
-    squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
-    std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
-    mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
-    print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
-    print(f'mse_non_zero-v:{mse_non_zero}')
-
-
-    MAE_d = mae(test_y[:,u,:,predict_end_index-output_size:predict_end_index],test_y_TLR[:,u,:,predict_end_index-output_size:predict_end_index]).cpu().detach().numpy()
-    print(f'MSE:{MSE_d},MAE:{MAE_d}, R² Score: {final_r2_score}',f'history:{history},future:{future}')
-    # get the var of test_y[:,u,:,2:3] after masking off all zeros
-    # test_y = test_y_TLR
-    # test_y = test_y.cpu().detach().numpy()
-    # test_y = test_y[:,u,:,2:3]
-    # mask = test_y != 0
-    # test_y = test_y[mask]
-    # var = np.var(test_y)
-    # # get the distrubution result of test_y
-    # plt.hist(test_y.ravel(),bins=100)
-    # plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
-
-    # print(f'var:{var},history:{history},future:{future}')
-
-
-    del test_y,test_y_TLR
-
-
-
-
-
+    # # LR for 30 history
+    # for dataset in ['fsvvd_raw','8i']:
+    #     for baseline in ['LR']:
+    #         for predict_end_index in [2,3,4]:
+    #             baseline_loss_eval(dataset,baseline,predict_end_index,history=30)
 
 
 

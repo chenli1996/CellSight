@@ -92,6 +92,7 @@ class GraphGRUCell(nn.Module):
         # Precompute edge_index_expanded
         self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
         # self.edge_index_expanded = self.precompute_edge_index_sparse(self.batch_size)
+        self.MLP_empty_node_update = nn.Linear(self.num_units+self.input_dim, self.num_units)
 
         self.head = 1
         self.multiGAT = False
@@ -336,7 +337,7 @@ class GraphGRUCell(nn.Module):
 
 
         # x_flat = x.view(-1, num_features)  # Shape: (batch_size * num_nodes, num_features)
-        x_flat = x.reshape(-1, num_features)  # (batch_size * num_nodes, input_dim)
+        x_flat = x.reshape(-1, num_features)  # (batch_size * num_nodes, num_features)
 
         # # Replicate edge_index for each graph in the batch
         # edge_index_expanded = edge_index.repeat(1, batch_size)
@@ -358,10 +359,14 @@ class GraphGRUCell(nn.Module):
         
         # import pdb;pdb.set_trace()
         data = Data(x=x_flat, edge_index=edge_index)
+        # full graph---------------------------------------------------------------
+        batch = Batch.from_data_list([data])
+        # -----------------------------------------------------------------------
 
-        sparse_data = self.remove_nodes_and_edges(data)
-        # import pdb;pdb.set_trace()
-        batch = Batch.from_data_list([sparse_data])
+        # for sparse graph---------------------------------------------------------------
+        # sparse_data = self.remove_nodes_and_edges(data)
+        # batch = Batch.from_data_list([sparse_data])
+        # -----------------------------------------------------------------------
 
         # batch = Batch.from_data_list([data])
         
@@ -385,20 +390,22 @@ class GraphGRUCell(nn.Module):
             else:
                 x = self.GAT3(batch.x, batch.edge_index)
 
-        # import pdb;pdb.set_trace()
 
         # uniform graph----------------------------------------------
-        # x = x.reshape(shape=(batch_size, self.num_nodes* output_size))
-        # import pdb;pdb.set_trace()
+        x = x.reshape(shape=(batch_size, self.num_nodes* output_size))
 
 
-# dynamic graph----------------------------------------------
-#         # Step 3: Reconstruct the original tensor
+        # dynamic graph----------------------------------------------
+        # Step 3: Reconstruct the original tensor
         # Option 2: Keep original features for dropped nodes
-        x_output = x_flat.clone()[:, :self.num_units]
-        x_output[sparse_data.nodes_to_keep] = x
-        x_output = x_output.reshape(shape=(batch_size, self.num_nodes* output_size))
-        x = x_output
+#         x_output = x_flat[:, :self.num_units]
+#         x_output[sparse_data.nodes_to_keep] = x
+# #       other node use MLP to update
+#         x_output[~sparse_data.nodes_to_keep] = self.MLP_empty_node_update(x_flat[~sparse_data.nodes_to_keep])
+#         # reshape to (batch_size, num_nodes, num_features)
+#         x_output = x_output.reshape(shape=(batch_size, self.num_nodes* output_size))
+#         x = x_output
+        # -----------------------------------------------------------------------
 
         return x
 
@@ -437,8 +444,8 @@ class GraphGRU(nn.Module):
                     nn.ReLU()
                 )
 
-        # self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
-        self.edge_index_expanded = self.precompute_edge_index_sparse(self.batch_size)
+        self.edge_index_expanded = self.precompute_edge_index(self.batch_size)
+        # self.edge_index_expanded = self.precompute_edge_index_sparse(self.batch_size)
 
         self.head = 1
         self.multiGAT = False
@@ -652,8 +659,7 @@ class GraphGRU(nn.Module):
         else:
             # last batch may have fewer samples
             edge_index = self.precompute_edge_index(batch_size)
-# using dynamic graph and compute the edge_index for each time step
-        # edge_index = self.precompute_edge_index_sparse(batch_size)
+
         data = Data(x=x_flat, edge_index=edge_index)
         batch = Batch.from_data_list([data])
         # import pdb;pdb.set_trace()

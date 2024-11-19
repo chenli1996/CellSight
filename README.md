@@ -67,3 +67,32 @@ Preprocess 8i data, save to binary file, downsammple for hpr
 ### rendering_pc.py
 
 render 8i data using fov and save to png figures. It can also be used to visualize the ply files using fov.
+
+
+### run-sbatch_test.py and run-sbatch_test.SBATCH
+
+test the variable in sbatch
+
+
+### baseline_trajectory_prediction.py
+
+TLP, LR baseline
+
+
+### node_feature_graph.py and node_feature_graph_FSVVD.py is used to generate node feature for baselines and ground truth
+~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}_{baseline}/
+node_feature for each user after trajectory prediction for {baseline}/
+
+~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}/
+node_feature for each user for ground truth trajectory
+
+
+### baseline_loss.py can generate training/testing data for ours and baselines and evaluate loss(training script can also generate training/testing data for ours)
+~/point_cloud_FoV_Graph/data/data/
+training/testing data for our model for 8i dataset
+
+~/point_cloud_FoV_Graph/data/fsvvd_raw/
+training/testing data for our model for fsvvd_raw dataset
+
+
+

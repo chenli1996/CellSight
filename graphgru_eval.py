@@ -84,7 +84,7 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
         # import pdb;pdb.set_trace()
 
         for i,(batch_x, batch_y) in enumerate (test_loader):
-            assert i == 0 # batch size is equal to the test set size
+            # assert i == 0 # batch size is equal to the test set size
 
             # import pdb;pdb.set_trace()
             # only predict last frame------
@@ -98,17 +98,10 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             outputs = net(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
 
     # -------------------mask the output and label to get the non-zero values
-            # outputs = outputs.unsqueeze(1).unsqueeze(-1)
-            # batch_y = batch_y.unsqueeze(1).unsqueeze(-1)
-            # batch_y = batch_y.unsqueeze(1)
-            # import pdb;pdb.set_trace()
             outputs_copy = outputs.repeat(1,future,1,7).clone()
             batch_y_copy = batch_y.repeat(1,future,1,1).clone()
-            # import pdb;pdb.set_trace()
+            
             pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(outputs_copy,batch_y_copy, future-1, output_size, predict_index_end)
-            # import pdb;pdb.set_trace()
-            # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
-            # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
             mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
             print(f'MSE_non_zero-o:{mse_non_zero}')
             std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
@@ -122,7 +115,7 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
 
 
             # -------------
-            if predict_index_end==3:
+            if predict_index_end in [3,4]:
                 outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
             else:
                 batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, 1, self.num_nodes, output_dim)
@@ -151,16 +144,15 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
                 squared_errors = (y_true - y_pred) ** 2
                 std_squared_errors = torch.std(squared_errors)
 
-                # y_true_non_zero is the true values that are not zero
-                y_true_non_zero = y_true[y_true != 0]
-                y_pred_non_zero = y_pred[y_true != 0]
-                squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
-                std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
-                mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
-                print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
-                print(f'mse_non_zero-v:{mse_non_zero}')
-                print(f'std_squared_errors:{std_squared_errors}')
-                # import pdb;pdb.set_trace()
+                # # y_true_non_zero is the true values that are not zero
+                # y_true_non_zero = y_true[y_true != 0]
+                # y_pred_non_zero = y_pred[y_true != 0]
+                # squared_errors_non_zero = (y_true_non_zero - y_pred_non_zero) ** 2
+                # std_squared_errors_non_zero = torch.std(squared_errors_non_zero)
+                # mse_non_zero = mse(y_pred_non_zero, y_true_non_zero).cpu().detach().numpy()
+                # print(f'std_squared_errors_non_zero:{std_squared_errors_non_zero}')
+                # print(f'mse_non_zero-v:{mse_non_zero}')
+                # print(f'std_squared_errors:{std_squared_errors}')
 
 
                 MAE[u] += MAE_d

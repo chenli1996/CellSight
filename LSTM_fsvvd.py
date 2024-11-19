@@ -16,6 +16,7 @@ class LSTMModel(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
+        # import pdb; pdb.set_trace()
         # Initialize hidden and cell states with zeros
         h_0 = torch.zeros(2, x.size(0), self.hidden_size).to(x.device)  # Hidden state
         c_0 = torch.zeros(2, x.size(0), self.hidden_size).to(x.device)  # Cell state
@@ -184,7 +185,8 @@ def main(future_steps):
                  'Sunqiran', 'WangYan', 'fupingyu', 'huangrenyi', 'liuxuya', 'sulehan', 'yuchen']
 
     # Read and combine all data
-    combined_df = read_all_data(all_users, all_videos)
+    combined_df = read_all_data(all_users, all_videos) # df shape: (n_samples, n_features) (n_samples, 17)
+    # import pdb; pdb.set_trace()
 
     # Define train, validation, and test videos
     train_videos = ['Chatting', 'Pulling_trolley', 'News_interviewing']
@@ -192,7 +194,7 @@ def main(future_steps):
     test_videos = ['Sweep']
 
     # Split data by video
-    train_data, val_data, test_data = split_data_by_video(combined_df, train_videos, val_videos, test_videos)
+    train_data, val_data, test_data = split_data_by_video(combined_df, train_videos, val_videos, test_videos) # here test and val are same
 
     # Further split 'Sweep' video data into validation and test sets by users
     test_users = all_users[:6]
@@ -203,8 +205,8 @@ def main(future_steps):
     test_data = test_data[test_data['User'].isin(test_users)]
 
     # Prepare training and validation datasets
-    X_train, y_train, _ = get_train_test_data(train_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
-    X_val, y_val, _ = get_train_test_data(val_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
+    X_train, y_train, _ = get_train_test_data(train_data, window_size=window_size, future_steps=future_steps, downsample_factor=2) # shape (n_samples, window_size, n_features=9)
+    X_val, y_val, _ = get_train_test_data(val_data, window_size=window_size, future_steps=future_steps, downsample_factor=2) # shape (n_samples, window_size, n_features=9)
 
     # Convert data to PyTorch tensors
     train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
@@ -217,19 +219,20 @@ def main(future_steps):
     input_size = X_train.shape[2]
     hidden_size = 60
     output_size = y_train.shape[1]
-
+    # import pdb; pdb.set_trace()
     model = LSTMModel(input_size, hidden_size, output_size).to(device)
 
     model = train_model(model, train_loader, val_loader)
     
     # Process test data per user
     for user in test_users:
+        # import pdb; pdb.set_trace()
         print(f"Processing predictions for user: {user}")
 
         user_test_data = test_data[test_data['User'] == user].copy()
 
         # Prepare dataset for the user
-        X_test, y_test, sample_indices = get_train_test_data(user_test_data, window_size=window_size, future_steps=future_steps, downsample_factor=2)
+        X_test, y_test, sample_indices = get_train_test_data(user_test_data, window_size=window_size, future_steps=future_steps, downsample_factor=2) # shape (n_samples, window_size, n_features=9)
 
         if len(X_test) == 0:
             print(f"No test data for user {user} after applying window_size and future_steps.")
@@ -241,9 +244,9 @@ def main(future_steps):
 
         mse, y_pred = evaluate_model(model, test_loader)
         print(f"User: {user}, Mean Squared Error: {mse}")
-
-        y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred)
-
+        # import pdb; pdb.set_trace()
+        y_pred_transformed = np.apply_along_axis(convert_back_to_angles, 1, y_pred) # Convert back to angles shape (n_samples, 6)
+        
         # Build a DataFrame with the same structure as the original data
         pred_df = user_test_data.copy()
         # import pdb; pdb.set_trace()
@@ -265,10 +268,11 @@ def main(future_steps):
 
         # Save the DataFrame
         # Use the same delimiter and format as the input files
-        pred_df.to_csv(os.path.join(pred_file_path, pred_file_name), sep='\t', index=False)
+        # pred_df.to_csv(os.path.join(pred_file_path, pred_file_name), sep='\t', index=False)
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    for future_steps in [1]:
+    # for future_steps in [1]:
+    for future_steps in [1, 10, 30,60,150]:
         print(f"Future Steps: {future_steps}")
         main(future_steps)

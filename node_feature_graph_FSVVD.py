@@ -80,7 +80,7 @@ def generate_graph(voxel_size=0.5):
     # print(graph_edges_df)
     # print(graph_edges_df_integer)
 
-def generate_node_feature():
+def generate_node_feature(baseline='GT'):
     # participant = 'P01_V1'
     # trajectory_index = 0
     image_width, image_height = np.array([1920, 1080])
@@ -107,24 +107,23 @@ def generate_node_feature():
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
     # baseline = 'GT'
-    baseline = 'LSTM'
+    # baseline = 'LSTM'
+    history = 90
+    if baseline == 'LR':
+        history = 30
     print(f'Processing {baseline}...')
     if baseline == 'GT':
         user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
-    # test_user_list = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 'Sunqiran']
+        pcd_name_list = ['Chatting','Pulling_trolley','News_interviewing','Sweep']
+        future_list = [0]
     else:# testing set only
-        # user_list = ['WangYan', 'fupingyu', 'huangrenyi', 'liuxuya', 'sulehan', 'yuchen']
         user_list = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 'Sunqiran']
+        pcd_name_list = ['Sweep']
+        future_list = [150,60,30,10,1]
+        # future_list = [1]
 
-    # user_list = ['yuchen']
-    # for pcd_name in ['longdress','loot','redandblack','soldier']:
-    # for pcd_name in ['Chatting','Pulling_trolley','News_interviewing','Sweep']:
-    for pcd_name in ['Sweep']:    
-    # video_name = 'Cleaning_whiteboard'
-    # video_name = 'News_interviewing'
-    # for pcd_name in ['soldier']:
-        history = 90
-        # future = 60
+    for pcd_name in pcd_name_list:
+        
         if baseline == 'GT':
             prefix = f'{pcd_name}_VS{voxel_size}'
         else:
@@ -136,7 +135,7 @@ def generate_node_feature():
         
         # prefix = f'{pcd_name}_VS{voxel_size}_filtered'
         # for future in [60]:
-        for future in [150]:
+        for future in future_list:
         # for future in [150]: # for ground truth, it does not matter the future value, only use one future value
             print(f'Processing {pcd_name} with history {history} and future {future}...')
             # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
@@ -221,9 +220,9 @@ def generate_node_feature():
                 node_index = np.array(node_index).reshape(-1,1)
                 coordinate_feature = np.array(coordinate_feature).reshape(-1,3)
                 distance_feature = np.array(distance_feature).reshape(-1,1)
-                # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
-                node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,coordinate_feature,distance_feature,node_index),axis=1)
-                node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
+                theta_feature = 2 * np.arctan(occlusion_feature * voxel_size / (2 * distance_feature))
+                node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
+                node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])                                
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
                 if baseline == 'GT':
@@ -240,7 +239,10 @@ def generate_node_feature():
 
 if __name__ == '__main__':
     # generate_graph(voxel_size=0.6) # run once to generate graph edges
-    generate_node_feature()
+    for baseline in ['LR']:
+    # for baseline in ['GT','TLP','LR','MLP','LSTM']:
+        generate_node_feature(baseline=baseline)
+    # generate_node_feature()
     # downsample_binary_pcd_data()
 
 # test pull rebase

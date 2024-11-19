@@ -230,7 +230,8 @@ def predict_next_state_tlp_rad(user_data, window_size=2,dof=6,future_steps = 1):
 
 def linear_regression_baseline():
     # read ground truth data
-    window_size_lr = 90
+    # window_size_lr = 90
+    window_size_lr = 30
     # future_steps =150
     file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     data_index = "H4"
@@ -239,9 +240,9 @@ def linear_regression_baseline():
     if not os.path.exists(pred_file_path):
         os.makedirs(pred_file_path)
 
-    # for future_steps in [1,30,40,60,90,150]:
+    for future_steps in [1,10,30,60,90,150]:
     # for future_steps in [1,10,30,60]:
-    for future_steps in [150]:
+    # for future_steps in [1]:
         pred_file_name = f"{data_index}_nav_pred"+str(window_size_lr)+str(future_steps)+".csv"  
         diff_file_name = f"{data_index}_nav_diff"+str(window_size_lr)+str(future_steps)+".csv"
         gt_file_name = f"{data_index}_nav_gt.csv"
@@ -288,6 +289,7 @@ def linear_regression_baseline():
 def truncated_linear_regression_baseline():
     # read ground truth data
     window_size_lr = 90
+    # window_size_lr = 30
     # future_steps =150
     file_path = "../point_cloud_data/6DoF-HMD-UserNavigationData-master/NavigationData/"
     data_index = "H4"
@@ -296,8 +298,8 @@ def truncated_linear_regression_baseline():
     if not os.path.exists(pred_file_path):
         os.makedirs(pred_file_path)
 
-    for future_steps in [10,30,60,150]:
-    # for future_steps in [1,10,30,60]:
+    # for future_steps in [10,30,60,150]:
+    for future_steps in [1]:
     # for future_steps in [60]:
         pred_file_name = f"{data_index}_nav_tlpred"+str(window_size_lr)+str(future_steps)+".csv"  
         diff_file_name = f"{data_index}_nav_tldiff"+str(window_size_lr)+str(future_steps)+".csv"
@@ -316,7 +318,9 @@ def truncated_linear_regression_baseline():
             predicted_trajectory_positions = np.zeros(trajectory_positions[begin_frame_index:end_frame_index+1,:].shape)
             predicted_trajectory_orientations = np.zeros(trajectory_orientations[begin_frame_index:end_frame_index+1,:].shape)
             for frame_index in range(begin_frame_index+window_size_lr,end_frame_index+1 -future_steps +1):
+                import pdb; pdb.set_trace()
                 future_state = predict_next_state_tlp(trajectory_positions[frame_index-window_size_lr:frame_index,:], window_size=window_size_lr,dof=dof,future_steps=future_steps)
+                # input has shape (window_size_lr,3) and output has shape (3,)
                 # print(trajectory_positions[frame_index-window_size_lr:frame_index,:])
                 # print(future_state)
                 # import pdb; pdb.set_trace()

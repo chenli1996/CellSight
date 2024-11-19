@@ -112,6 +112,8 @@ def main(future_steps):
     validation_data = read_validation_data('H4')
 
     X_train, y_train = get_train_test_data(train_data, window_size=window_size, future_steps=future_steps)
+    # shape of X_train is (n_samples, window_size, n_features)
+    # import pdb; pdb.set_trace()
 
     X_test, y_test = get_train_test_data(test_data, window_size=window_size, future_steps=future_steps)
 
@@ -119,7 +121,8 @@ def main(future_steps):
     X_test = X_test.reshape((X_test.shape[0], -1))
 
     model = build_mlp_model()
-    model = train_model(model, X_train, y_train)
+    # import pdb; pdb.set_trace()
+    model = train_model(model, X_train, y_train) # shape of y_train is (n_samples, n_features)
     
     mse = evaluate_model(model, X_test, y_test)
     print(f'Mean Squared Error: {mse}')
@@ -135,7 +138,7 @@ def main(future_steps):
     test_data_pred.to_csv(pred_file_path + pred_file_name, index=False)
 
 if __name__ == '__main__':
-    for future_steps in [10, 30, 60, 150]:
-    # for future_steps in [60]:
+    # for future_steps in [10, 30, 60, 150]:
+    for future_steps in [1]:
         main(future_steps)
     # main()

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from graphgru_model import *
 from graphgru_eval import *
-
+import argparse
 # torch.autograd.set_detect_anomaly(True)
 
 
@@ -15,21 +15,35 @@ from graphgru_eval import *
 # torch.set_default_dtype(torch.float32)
 # torch.set_default_device()
 # torch.set_default_tensor_type(torch.FloatTensor)
+parser = argparse.ArgumentParser(description='GraphGRU Training Script')
+parser.add_argument('--data', type=str, default='fsvvd_raw', help='Name of the dataset to use, fsvvd_raw, 8i etc')
+parser.add_argument('--pred', type=int, default=4, help='Index of the feature to predict, 2,3,4 etc')
+args = parser.parse_args()
+
 def main(future=10):
-    with_train = False
+    with_train = True
     continue_train_early_stop_val = False
     user_previous_model = False # whether to load previous model
     if not with_train:
         user_previous_model = True # whether to load previous model
     last_val_loss = 0.210087
     object_driven = False
-    dataset = 'fsvvd_full'
+    dataset = args.data
     # dataset = '8i'
-    if dataset == 'fsvvd_full':
+    # predict_index_end=4 # 3 is occlusion, 2 is in-fov, 4 is resolution
+    predict_index_end = args.pred
+
+    num_epochs=30
+    batch_size = 32
+    print(f'dataset:{dataset},predict_index_end:{predict_index_end}')
+    if dataset == 'fsvvd_raw':
         voxel_size = 0.6
         p_start = 0
         p_end = 11
         edge_prefix = str(voxel_size) + 'fsvvd_raw'
+        learning_rate = 0.0001
+        if future in [10,1]:
+            learning_rate = 0.00001
     elif dataset == 'fsvvd_filtered':
         voxel_size = 0.4
         p_start = 0
@@ -40,6 +54,9 @@ def main(future=10):
         p_start = 1
         p_end = 28
         edge_prefix = str(voxel_size)
+        learning_rate = 0.0003
+        if future == 150:
+            learning_rate = 0.0001
     if voxel_size == 128:
         num_nodes = 240
     elif voxel_size == 64:
@@ -57,9 +74,8 @@ def main(future=10):
     # p_end = 28
     # p_end = 4
     output_size = 1
-    predict_index_end=3 # 3 is occlusion, 2 is in-fov
-    num_epochs=30
-    batch_size = 32*4
+    
+
     # batch_size=16 #multi_out
     # batch_size=32 #G1 90
     # batch_size=64 # 256 model
@@ -68,18 +84,21 @@ def main(future=10):
     # batch_size=32 #T1 h1 fulledge
     hidden_dim = 128
 
+
     # clip = 600
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
     # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
     # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    model_prefix = f'{dataset}multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
+    # model_prefix = f'{dataset}multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
 
-    print(dataset,model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
+    model_prefix = f'{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
+
+    # print(dataset,model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
 
 
 
-    if dataset == 'fsvvd_full':
+    if dataset == 'fsvvd_raw':
         train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     elif dataset == 'fsvvd_filtered':
         pass
@@ -87,7 +106,27 @@ def main(future=10):
         train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     else:
         pass
-    
+    # import pdb;pdb.set_trace()
+    # only keep 0:pred_index_end and -4: features
+    assert train_x.shape[-1] == 8
+    assert train_y.shape[-1] == 8
+    assert test_x.shape[-1] == 8
+    assert test_y.shape[-1] == 8
+    assert val_x.shape[-1] == 8
+    assert val_y.shape[-1] == 8
+
+    train_x = np.concatenate((train_x[:,:,:, :predict_index_end], train_x[:,:,:, -4:]), axis=3)
+    train_y = np.concatenate((train_y[:,:,:, :predict_index_end], train_y[:,:,:, -4:]), axis=3)
+    test_x = np.concatenate((test_x[:,:,:, :predict_index_end], test_x[:,:,:, -4:]), axis=3)
+    test_y = np.concatenate((test_y[:,:,:, :predict_index_end], test_y[:,:,:, -4:]), axis=3)
+    val_x = np.concatenate((val_x[:,:,:, :predict_index_end], val_x[:,:,:, -4:]), axis=3)
+    val_y = np.concatenate((val_y[:,:,:, :predict_index_end], val_y[:,:,:, -4:]), axis=3)
+
+    # import pdb;pdb.set_trace()
+
+
+
+
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
@@ -111,10 +150,10 @@ def main(future=10):
                                             batch_size=batch_size,
                                             shuffle=True,num_workers=4,drop_last=True)
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=int(test_x.shape[0]/1),
+                                            batch_size=int(test_x.shape[0]/2),
                                             shuffle=False,drop_last=True)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                            batch_size=int(val_x.shape[0]/1),
+                                            batch_size=int(val_x.shape[0]/2),
                                             shuffle=False,drop_last=True)     
     # test_loader = torch.utils.data.DataLoader(dataset=val_dataset,
     #                                         batch_size=int(val_x.shape[0]),
@@ -131,7 +170,7 @@ def main(future=10):
     # r1, r2 = getedge('newedge',900)
     r1, r2 = getedge(edge_path)
     feature_num = train_x.shape[-1]
-    assert feature_num == 7
+    assert feature_num == predict_index_end + 4
     input_size = feature_num
     mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2,batch_size)
     # if best model is saved, load it
@@ -145,17 +184,19 @@ def main(future=10):
     # print(mymodel)
     if with_train:
         # learning_rate=0.0003
-        if predict_index_end==3:
-            learning_rate = 0.0003  
-            criterion = torch.nn.MSELoss()    # mean-squared error for regression
-        else:
-            learning_rate = 0.0003
+        # if predict_index_end==3:
+        # learning_rate = 0.0001 
+        criterion = torch.nn.MSELoss()    # mean-squared error for regression
+        # else:
+            # learning_rate = 0.0003
             # criterion1 = torch.nn.MSELoss()    # mean-squared error for regression
-            criterion = torch.nn.MSELoss()    # mean-squared error for regression
+            # criterion = torch.nn.MSELoss()    # mean-squared error for regression
             # criterion = torch.nn.L1Loss()    # L1 loss
             # new loss using soft dice loss
             # criterion = SoftDiceLoss()
             # criterion = torch.nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
+        if future == 1:
+            learning_rate = 0.0001
         
         # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
@@ -166,11 +207,11 @@ def main(future=10):
 
         # Initialize the early stopping object
         if continue_train_early_stop_val:
-            early_stopping = EarlyStopping(patience=10, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
+            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
         else:
-            early_stopping = EarlyStopping(patience=10, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
+            early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=float('inf'), path=best_checkpoint_model_path)
         # learning rate scheduler 
-        scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.1, min_lr=1e-6)
+        scheduler = ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.1, min_lr=1e-6)
 
         for epochs in range(1,num_epochs+1):
             mymodel.train()
@@ -212,7 +253,7 @@ def main(future=10):
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
                 # ---------
-                if predict_index_end==3:
+                if predict_index_end in [3,4]:
                     outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
                 else:
                     batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
@@ -234,7 +275,6 @@ def main(future=10):
 
                 optimizer.step()
                 iter1+=1
-                # print loss
                 if i % 100 == 0:
                     print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
                     # print(criterion1(outputs,batch_y).item())
@@ -271,7 +311,7 @@ def main(future=10):
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
-
+        
         np.save(f'./data/output/graphgru_{model_prefix}_training_loss{history}_{future}',lossa)
         np.save(f'./data/output/graphgru_{model_prefix}_val_loss{history}_{future}',val_loss_list)
         print('loss saved')
@@ -301,7 +341,7 @@ def main(future=10):
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
 
 if __name__ == '__main__':
-    for future in [150,60,30,10,1]:
-    # for future in [1]:
+    # for future in [150,60,30,10,1]:
+    for future in [10,1]:
         print(f'future:{future}')
         main(future)
