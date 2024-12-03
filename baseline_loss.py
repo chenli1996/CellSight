@@ -1,3 +1,4 @@
+from operator import index
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
@@ -243,13 +244,16 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
     # test_end = 26 -3
     # val_start = 27
     # val_end = 28
-    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
     # column_name ['occlusion_feature']
+    
     def get_train_test_data(pcd_name_list,p_start=1,p_end=28):
         # p_start = p_start + start_bias
         # p_end = p_end + end_bias
+        index_end = 0
+        test_index = 0
         print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
         train_x,train_y = [],[]
         for pcd_name in pcd_name_list:
@@ -258,7 +262,7 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
                 # generate graph voxel grid features
                 prefix = f'{pcd_name}_VS{voxel_size}_{baseline}'
-                node_feature_path = f'./data/{prefix}/{participant}node_feature{history}{future}.csv'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature_angular{history}{future}.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data)
                 feature_num = len(column_name)
@@ -268,12 +272,14 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
                 train_x1,train_y1=get_history_future_data_full(x,history,future)
+                # train_x1,train_y1,index_end,test_index=get_history_future_data_full_index(x,history,future,index_end,test_index)
                 if len(train_x1) == 0:
                     print(f'no enough data{participant}')
                     continue
                 train_x.append(train_x1)
                 train_y.append(train_y1)
-        # import pdb;pdb.set_trace()
+
+                # import pdb;pdb.set_trace()
         # try:
         if len(train_x) == 0:
             return [],[]
@@ -286,12 +292,12 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
     # clip = 600
     # print('clip:',clip)
     # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
-    if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy'):
-        print('load data from file')
+    if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy'):
+        print('load baseline data from file angular')
         # add future history in the file name
         # add new directory data/data
-        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy')
-        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy')
+        test_x = np.load(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy')
+        test_y = np.load(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy')
     else:
         print('generate data from files')
         # train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
@@ -300,8 +306,8 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
         test_x = test_x.astype(np.float32)
         test_y = test_y.astype(np.float32)
         # save data to file with prefix is all_videos
-        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy',test_x)
-        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy',test_y)
+        np.save(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_x)
+        np.save(f'./data/data/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_y)
         print('data saved')
     return test_x,test_y
 
@@ -392,7 +398,7 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
     val_x = np.array(val_x)
     val_y = np.array(val_y)
 
-    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
+    column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['Chatting','Pulling_trolley','News_interviewing','Sweep']
     user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
     # column_name ['occlusion_feature']
@@ -401,13 +407,15 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
         # p_end = p_end + end_bias
         print(f'{pcd_name_list}',f'p_start:{p_start},p_end:{p_end}')
         train_x,train_y = [],[]
+        index_end = 0
+        test_index = 0
         for pcd_name in pcd_name_list:
             print(f'pcd_name:{pcd_name}')
             for user_i in tqdm(range(p_start,p_end)):
                 participant = user_list[user_i]
                 # generate graph voxel grid features
                 prefix = f'{pcd_name}_VS{voxel_size}_{baseline}'
-                node_feature_path = f'./data/{prefix}/{participant}node_feature{history}{future}.csv'
+                node_feature_path = f'./data/{prefix}/{participant}node_feature_angular{history}{future}.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
                 # read the data from csv file as numpy array
@@ -423,6 +431,7 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
                 # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
                 train_x1,train_y1=get_history_future_data_full(x,history,future)
+                # train_x1,train_y1,index_end,test_index=get_history_future_data_full_index(x,history,future,index_end,test_index)
                 if len(train_x1) == 0:
                     print(f'no enough data{participant}',flush=True)
                     continue
@@ -446,10 +455,10 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
     if not os.path.exists(f'./data/{dataset}'):
         os.makedirs(f'./data/{dataset}')
 
-    if os.path.exists(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy'):
-        print('load data from file')
-        test_x = np.load(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy')
-        test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy')
+    if os.path.exists(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy'):
+        print('load baseline data from file angular')
+        test_x = np.load(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy')
+        test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy')
         # val_x = np.load(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy')
         # val_y = np.load(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy')
 
@@ -467,8 +476,8 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
         # save data to file with prefix is all_videos
         # np.save(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
         # np.save(f'./data/{dataset}/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
-        np.save(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}.npy',test_x)
-        np.save(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}.npy',test_y)
+        np.save(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_x)
+        np.save(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_y)
         # np.save(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
         # np.save(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)
 
@@ -530,7 +539,7 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
 
     # history = 10
     # for future in [1,10,30,60]:
-    history=90
+    # history=90
     # for future in [1,10,30,60]:
     # history = 30
     # predict_end_index = 2 #infov
@@ -540,10 +549,10 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
     mse_list = []
     R2_score_list = []
 
-    # for future in [150]:
-    # for future in [150,60,30,10,1]:
-    for future in [1,10,30,60,150]:
     # for future in [1]:
+    # for future in [150,60,30,10,1]:
+    # for future in [1,10,30,60,150]:
+    for future in [1]:
         print(f'history:{history},future:{future}')
         output_size = 1
         # load ground truth data
@@ -551,7 +560,7 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
             train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         else:
             train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-
+        print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape)
         del train_x,train_y,val_x,val_y,test_x
         # test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         # del test_x_LR
@@ -568,9 +577,11 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
             test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start,p_end,voxel_size,num_nodes)
         del test_x_TLR
         print('shape of test_y:',test_y.shape,'shape of test_y_TLR:',test_y_TLR.shape)
+        assert test_y.shape == test_y_TLR.shape
         # import pdb;pdb.set_trace()
         test_y = torch.from_numpy(test_y)
         test_y_TLR = torch.from_numpy(test_y_TLR)
+        # import pdb;pdb.set_trace()
 
 
 
@@ -603,8 +614,41 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
         #     # import pdb;pdb.set_trace()
         #     if abs(MSE-0.138) < 0.1 and MAE>0.2:
         #         print(f'MSE:{MSE},MAE:{MAE}',f'index:{i}')
+        for index in range(0,test_y.size(0),1):
+            baseline_output = test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[index].squeeze(-1)
+            gt_output = test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[index].squeeze(-1)
+            mse_temp = mse(baseline_output, gt_output).cpu().detach().numpy()
+            mae_temp = mae(baseline_output, gt_output).cpu().detach().numpy()
+
+            # if mse_temp > 0.12 and mse_temp < 0.15: # 8i p2
+            # if mse_temp > 0.0025 and mse_temp < 0.003: #fsvvd p4 
+            #     print(f'index:{index},MSE:{mse_temp},MAE:{mae_temp}')
+        # import pdb;pdb.set_trace()
+        # print()
+
+            # if index == 497: #8i p2
+            # if index == 504:
+            # if index == 4235: #fsvvd p4
+            if index == 1635: #fsvvd p4
+                print(f'index:{index},MSE:{mse_temp}')
+                print('baseline:',baseline_output)
+                print('gt:',gt_output)
+            
+        import pdb;pdb.set_trace()
+        print()
         
-        MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
+        # MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
+        # print('LSTM')
+        # print(test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1))
+        # print('GT')
+        # print(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1))
+        # aa = mse(test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1), test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1)).cpu().detach().numpy()
+        # print(aa)
+        # import pdb;pdb.set_trace()
+        # w
+
+        # case_study_test_y = test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0]
+        # import pdb;pdb.set_trace()
         # Calculate the squared errors
         # squared_errors = (
         #     test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
@@ -694,21 +738,24 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
 
         del test_y,test_y_TLR
     print(f'dataset:{dataset},baseline:{baseline},predict_end_index:{predict_end_index}')
-    print(f'MSE_list:{mse_list},R2_score_list:{R2_score_list}')
+    print(f'{baseline}:MSE_list:{mse_list},R2_score_list:{R2_score_list}')
 
 
 
 
 if __name__ == '__main__':
-    for dataset in ['8i','fsvvd_raw']:
-        for baseline in ['MLP','TLP','LR']:
-            for predict_end_index in [2,3,4]:
+    for dataset in ['8i']:
+    # for dataset in ['fsvvd_raw']:
+        # for baseline in ['LSTM','MLP','TLR','LR']:
+        for baseline in ['LSTM']:
+            # for predict_end_index in [2,3,4]:
+            for predict_end_index in [4]:
                 baseline_loss_eval(dataset,baseline,predict_end_index,history=90)
     
     # # LR for 30 history
-    # for dataset in ['fsvvd_raw','8i']:
-    #     for baseline in ['LR']:
-    #         for predict_end_index in [2,3,4]:
+    # for dataset in ['8i']:
+    #     for baseline in ['MLP']:
+    #         for predict_end_index in [4]:
     #             baseline_loss_eval(dataset,baseline,predict_end_index,history=30)
 
 

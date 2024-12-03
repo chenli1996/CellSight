@@ -6,12 +6,12 @@
 #SBATCH --time=18:00:00
 #SBATCH --mem=128GB	
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=fsvvd_p5_angular
+#SBATCH --job-name=8i_p5_angular
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
-#SBATCH --output=./log/fsvvd_p5_angular_%j.out
+#SBATCH --output=./log/8i_p5_angular_%j.out
 module purge
-data="fsvvd_raw"
+data="8i"
 pred=5
 singularity exec --nv \
   --overlay /scratch/cl5089/pytorch-example/my_pytorch.ext3:ro \

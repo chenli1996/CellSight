@@ -6,10 +6,10 @@
 #SBATCH --time=18:00:00
 #SBATCH --mem=128GB	
 #SBATCH --gres=gpu:a100:1
-#SBATCH --job-name=fsvvd_p5_angular
+#SBATCH --job-name=1_1e6_fsvvd_p5_angular
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=cl5089@nyu.edu
-#SBATCH --output=./log/fsvvd_p5_angular_%j.out
+#SBATCH --output=./log/fsvvd_p5_1_1e6_angular_%j.out
 module purge
 data="fsvvd_raw"
 pred=5

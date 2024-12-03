@@ -86,7 +86,7 @@ def generate_node_feature(baseline='GT'):
     image_width, image_height = np.array([1920, 1080])
     # generate graph voxel grid features
     voxel_size = 0.6
-    min_bounds = np.array([-2.82,  -0.78  , -2.31]) 
+    min_bounds = np.array([-2.82,  -0.78  , -2.31])
     max_bounds = np.array([ 1.32, 2.08,  1.94])
 
     # voxel_size = 0.4
@@ -106,11 +106,12 @@ def generate_node_feature(baseline='GT'):
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
+    # import pdb; pdb.set_trace()
     # baseline = 'GT'
     # baseline = 'LSTM'
     history = 90
-    if baseline == 'LR':
-        history = 30
+    # if baseline == 'LR':
+    #     history = 30
     print(f'Processing {baseline}...')
     if baseline == 'GT':
         user_list = ['ChenYongting','GuoYushan','Guozhaonian','HKY','RenZhichen','Sunqiran','WangYan','fupingyu','huangrenyi','liuxuya','sulehan','yuchen']
@@ -120,6 +121,9 @@ def generate_node_feature(baseline='GT'):
         user_list = ['ChenYongting', 'GuoYushan', 'Guozhaonian', 'HKY', 'RenZhichen', 'Sunqiran']
         pcd_name_list = ['Sweep']
         future_list = [150,60,30,10,1]
+        # if baseline == 'LR':
+            # future_list = [150]
+        
         # future_list = [1]
 
     for pcd_name in pcd_name_list:
@@ -220,27 +224,30 @@ def generate_node_feature(baseline='GT'):
                 node_index = np.array(node_index).reshape(-1,1)
                 coordinate_feature = np.array(coordinate_feature).reshape(-1,3)
                 distance_feature = np.array(distance_feature).reshape(-1,1)
-                theta_feature = 2 * np.arctan(occlusion_feature * voxel_size / (2 * distance_feature))
-                node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
-                node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])                                
+                # import pdb; pdb.set_trace()
+                theta_feature = 2 * occlusion_feature * np.arctan( voxel_size / (2 * distance_feature))
+                f_theta_feature = 2 * in_FoV_feature * np.arctan( voxel_size / (2 * distance_feature))
+                node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,theta_feature,f_theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
+                node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])                                
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
                 if baseline == 'GT':
-                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature.csv')
-                    print(f'saved to file /data/{prefix}/{user_i}node_feature.csv')
+                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature_angular.csv')
+                    print(f'saved to file /data/{prefix}/{user_i}node_feature_angular.csv')
                 else:
                  # LR for testing***********************************************
-                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature{history}{future}.csv')
+                    node_feature_df.to_csv(f'./data/{prefix}/{user_i}node_feature_angular{history}{future}.csv')
                 # save to 
-                    print(f'saved to file /data/{prefix}/{user_i}node_feature{history}{future}.csv')
+                    print(f'saved to file /data/{prefix}/{user_i}node_feature_angular{history}{future}.csv')
 
 
 
 
 if __name__ == '__main__':
     # generate_graph(voxel_size=0.6) # run once to generate graph edges
-    for baseline in ['LR']:
-    # for baseline in ['GT','TLP','LR','MLP','LSTM']:
+    # for baseline in ['LR']:
+    # for baseline in ['GT','LSTM','LR','TLR','MLP']:
+    for baseline in ['TLR','MLP']:
         generate_node_feature(baseline=baseline)
     # generate_node_feature()
     # downsample_binary_pcd_data()

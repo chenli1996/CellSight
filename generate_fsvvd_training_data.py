@@ -3,8 +3,8 @@ from utils_graphgru import get_train_test_data_on_users_all_videos_fsvvd
 # need 256G memory to generate the data
 for future in [150,60,30,10,1]:
     print('future:',future)
-    dataset = 'fsvvd_raw'
-    history = 90
+    dataset = '8i'
+    history = 30
     voxel_size = 0.6
     p_start = 0
     p_end = 11

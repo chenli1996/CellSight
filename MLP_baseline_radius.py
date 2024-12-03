@@ -7,7 +7,7 @@ import joblib
 
 # Function to build a simple MLP model
 def build_mlp_model():
-    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=False, early_stopping=True)
+    model = MLPRegressor(hidden_layer_sizes=(60, 60), max_iter=1000, random_state=21, verbose=True, early_stopping=True)
     return model
 
 # Function to read training data
@@ -139,6 +139,6 @@ def main(future_steps):
 
 if __name__ == '__main__':
     # for future_steps in [10, 30, 60, 150]:
-    for future_steps in [1]:
+    for future_steps in [60]:
         main(future_steps)
     # main()

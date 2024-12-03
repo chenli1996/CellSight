@@ -380,7 +380,7 @@ def main_tlp(future_steps):
         pred_df.loc[sample_indices, ['HeadX', 'HeadY', 'HeadZ', 'HeadRX', 'HeadRY', 'HeadRZ']] = y_pred_transformed
 
         # Save predictions
-        pred_file_path = f"../point_cloud_data/TLP_pred_fsvvd/{test_videos[0]}/"
+        pred_file_path = f"../point_cloud_data/TLR_pred_fsvvd/{test_videos[0]}/"
         if not os.path.exists(pred_file_path):
             os.makedirs(pred_file_path)
 

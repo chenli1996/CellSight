@@ -17,11 +17,12 @@ import argparse
 # torch.set_default_tensor_type(torch.FloatTensor)
 parser = argparse.ArgumentParser(description='GraphGRU Training Script')
 parser.add_argument('--data', type=str, default='fsvvd_raw', help='Name of the dataset to use, fsvvd_raw, 8i etc')
+# parser.add_argument('--data', type=str, default='8i', help='Name of the dataset to use, fsvvd_raw, 8i etc')
 parser.add_argument('--pred', type=int, default=4, help='Index of the feature to predict, 2,3,4 etc')
 args = parser.parse_args()
 
 def main(future=10):
-    with_train = True
+    with_train = False
     continue_train_early_stop_val = False
     user_previous_model = False # whether to load previous model
     if not with_train:
@@ -41,9 +42,15 @@ def main(future=10):
         p_start = 0
         p_end = 11
         edge_prefix = str(voxel_size) + 'fsvvd_raw'
-        learning_rate = 0.0001
+        learning_rate = 0.0003
+        if predict_index_end == 4:
+            learning_rate = 0.0001
         if future in [10,1]:
             learning_rate = 0.00001
+            batch_size = 45
+        if predict_index_end == 5 and future == 1:
+            learning_rate = 0.000001
+            batch_size = 45
     elif dataset == 'fsvvd_filtered':
         voxel_size = 0.4
         p_start = 0
@@ -55,7 +62,7 @@ def main(future=10):
         p_end = 28
         edge_prefix = str(voxel_size)
         learning_rate = 0.0003
-        if future == 150:
+        if future in [150,30]:
             learning_rate = 0.0001
     if voxel_size == 128:
         num_nodes = 240
@@ -92,7 +99,8 @@ def main(future=10):
     # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
     # model_prefix = f'{dataset}multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
 
-    model_prefix = f'{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
+    # model_prefix = f'{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
+    model_prefix = f'angular_{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
 
     # print(dataset,model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
 
@@ -108,19 +116,29 @@ def main(future=10):
         pass
     # import pdb;pdb.set_trace()
     # only keep 0:pred_index_end and -4: features
-    assert train_x.shape[-1] == 8
-    assert train_y.shape[-1] == 8
-    assert test_x.shape[-1] == 8
-    assert test_y.shape[-1] == 8
-    assert val_x.shape[-1] == 8
-    assert val_y.shape[-1] == 8
+    assert train_x.shape[-1] == 9
+    assert train_y.shape[-1] == 9
+    assert test_x.shape[-1] == 9
+    assert test_y.shape[-1] == 9
+    assert val_x.shape[-1] == 9
+    assert val_y.shape[-1] == 9
 
-    train_x = np.concatenate((train_x[:,:,:, :predict_index_end], train_x[:,:,:, -4:]), axis=3)
-    train_y = np.concatenate((train_y[:,:,:, :predict_index_end], train_y[:,:,:, -4:]), axis=3)
-    test_x = np.concatenate((test_x[:,:,:, :predict_index_end], test_x[:,:,:, -4:]), axis=3)
-    test_y = np.concatenate((test_y[:,:,:, :predict_index_end], test_y[:,:,:, -4:]), axis=3)
-    val_x = np.concatenate((val_x[:,:,:, :predict_index_end], val_x[:,:,:, -4:]), axis=3)
-    val_y = np.concatenate((val_y[:,:,:, :predict_index_end], val_y[:,:,:, -4:]), axis=3)
+    if predict_index_end ==5:
+        train_x = np.concatenate((train_x[:,:,:, :2], train_x[:,:,:, -5:]), axis=3)
+        train_y = np.concatenate((train_y[:,:,:, :2], train_y[:,:,:, -5:]), axis=3)
+        test_x = np.concatenate((test_x[:,:,:, :2], test_x[:,:,:, -5:]), axis=3)
+        test_y = np.concatenate((test_y[:,:,:, :2], test_y[:,:,:, -5:]), axis=3)
+        val_x = np.concatenate((val_x[:,:,:, :2], val_x[:,:,:, -5:]), axis=3)
+        val_y = np.concatenate((val_y[:,:,:, :2], val_y[:,:,:, -5:]), axis=3)
+
+    else:
+        train_x = np.concatenate((train_x[:,:,:, :predict_index_end], train_x[:,:,:, -4:]), axis=3)
+        train_y = np.concatenate((train_y[:,:,:, :predict_index_end], train_y[:,:,:, -4:]), axis=3)
+        test_x = np.concatenate((test_x[:,:,:, :predict_index_end], test_x[:,:,:, -4:]), axis=3)
+        test_y = np.concatenate((test_y[:,:,:, :predict_index_end], test_y[:,:,:, -4:]), axis=3)
+        val_x = np.concatenate((val_x[:,:,:, :predict_index_end], val_x[:,:,:, -4:]), axis=3)
+        val_y = np.concatenate((val_y[:,:,:, :predict_index_end], val_y[:,:,:, -4:]), axis=3)
+    
 
     # import pdb;pdb.set_trace()
 
@@ -170,7 +188,8 @@ def main(future=10):
     # r1, r2 = getedge('newedge',900)
     r1, r2 = getedge(edge_path)
     feature_num = train_x.shape[-1]
-    assert feature_num == predict_index_end + 4
+    print(f'feature_num:{feature_num},predict_index_end:{predict_index_end}')
+    # assert feature_num == predict_index_end + 4
     input_size = feature_num
     mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2,batch_size)
     # if best model is saved, load it
@@ -255,7 +274,9 @@ def main(future=10):
                 # ---------
                 if predict_index_end in [3,4]:
                     outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
-                else:
+                elif predict_index_end == 5:#change to third feature, 3
+                    batch_y = batch_y[:,:,:,3-output_size:3] # (batch_size, self.output_window, self.num_nodes, output_size)                
+                else:# here is 2
                     batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
                 # ---------
                 # import pdb;pdb.set_trace()
@@ -278,6 +299,7 @@ def main(future=10):
                 if i % 100 == 0:
                     print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
                     # print(criterion1(outputs,batch_y).item())
+                # break #-----------------------------------------------------------------------
             # Print profiler results
             # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
             # break                          
@@ -291,14 +313,14 @@ def main(future=10):
                 #save and reloasd
                 torch.save(mymodel.state_dict(), f'./data/model/graphgru_{model_prefix}_{history}_{future}_{epochs}.pt')
                 print('model saved')
-            # val_loss = get_val_loss(mymodel,val_loader,criterion,output_size)
+            
             val_loss = get_val_loss(mymodel,val_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
             val_loss_list.append(val_loss)
             print("val_loss:%1.5f" % (val_loss))
 
-            # check the tesing loss for debug
-            test_loss = get_val_loss(mymodel,test_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
-            print("test_loss:%1.5f" % (test_loss))
+            # # check the tesing loss for debug
+            # test_loss = get_val_loss(mymodel,test_loader,criterion,output_size,target_output,predict_index_end,object_driven=object_driven)
+            # print("test_loss:%1.5f" % (test_loss))
 
 
             # Step the scheduler with the validation loss
@@ -311,6 +333,8 @@ def main(future=10):
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
+
+            # break #-----------------------------------------------------------------------
         
         np.save(f'./data/output/graphgru_{model_prefix}_training_loss{history}_{future}',lossa)
         np.save(f'./data/output/graphgru_{model_prefix}_val_loss{history}_{future}',val_loss_list)
@@ -322,7 +346,7 @@ def main(future=10):
         plt.legend(['Training Loss', 'Validation Loss'])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
-        plt.savefig(f'./data/fig/graphgru_{model_prefix}_trainingloss{history}_{future}.png')
+        plt.savefig(f'./data/fig/{model_prefix}.png')
 
     mymodel.load_state_dict(torch.load(best_checkpoint_model_path))
 
@@ -336,12 +360,23 @@ def main(future=10):
         # test_loader_nn = torch.utils.data.DataLoader(dataset=test_dataset_nn,
         #                                         batch_size=int(test_x_nn.shape[0]/10),
         #                                         shuffle=False,drop_last=True)
-        eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output,predict_index_end=predict_index_end)   
+        mse_eval,r2_eval = eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output,predict_index_end=predict_index_end)   
         # eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=history,future=future)
         # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
-
+    return mse_eval,r2_eval
 if __name__ == '__main__':
+    mse_eval_list = []
+    r2_eval_list = []
+    future_list = []
     # for future in [150,60,30,10,1]:
-    for future in [10,1]:
+    for future in [60]:
+    # for future in [1]:
         print(f'future:{future}')
-        main(future)
+        mse_eval, r2_eval = main(future)
+        # import pdb;pdb.set_trace()
+        mse_eval_list.insert(0,round(mse_eval,4))
+        r2_eval_list.insert(0,round(r2_eval,3))
+        future_list.insert(0,future)
+        # print(f'future:{future},mse_eval:{mse_eval},r2_eval:{r2_eval}')
+    print(f'future_list:{future_list},dataset:{args.data},predict_index_end:{args.pred}')
+    print(f'Ours: MSE_list:{mse_eval_list},R2_score_list:{r2_eval_list}')

@@ -117,6 +117,8 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             # -------------
             if predict_index_end in [3,4]:
                 outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end)
+            elif predict_index_end==5:
+                batch_y = batch_y[:,:,:,3-output_size:3] # (batch_size, 1, self.num_nodes, output_dim)
             else:
                 batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, 1, self.num_nodes, output_dim)
             # ----------------
@@ -126,11 +128,28 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
             #     if index+i*outputs.size(0)==1682:
             #         print('Graph',outputs[index, :, :, :].view(30,8))
             #         print('GT',batch_y[index, :, :, :].view(30,8))
-            #     # import pdb;pdb.set_trace()
-            #     MSE_temp = mse(batch_y[index, :, :, :].contiguous(), outputs[index, :, :, :].contiguous()).cpu().detach().numpy()
-            #     MAE_temp = mae(batch_y[index, :,:,:],outputs[index,:,:,:]).cpu().detach().numpy()
-            #     if abs(MSE_temp-0.072)<0.05 and MAE_temp<0.10:
-            #         print(f'MSE:{MSE_temp},MAE:{MAE_temp}',f'index:{index+i*outputs.size(0)}')
+            # import pdb;pdb.set_trace()
+            for index in range(0,outputs.size(0),1):
+                    MSE_temp = mse(outputs[index,0,:,0],batch_y[index,0,:,0])
+                    MAE_temp = mae(outputs[index,0,:,0],batch_y[index,0,:,0])               
+                    
+                    # if MSE_temp<0.06 and MSE_temp>0.05: # 8i p2
+                    # if MSE_temp>0.0014 and MSE_temp<0.0016: # fsvvd p4
+                    #     print(f'MSE:{MSE_temp},MAE:{MAE_temp}',f'index:{index+i*outputs.size(0)}')
+                        
+                    # if index+i*outputs.size(0)==497:
+                    # if index+i*outputs.size(0)==504:
+                    if index+i*outputs.size(0)==4235:# fsvvd p4
+                    
+                        print('Graph')
+                        print(outputs[index,0,:,0])
+                        print('GT')
+                        print(batch_y[index,0,:,0])                        
+                        print(f'MSE:{MSE_temp},MAE:{MAE_temp}',f'index:{index+i*outputs.size(0)}')
+
+            MSE_temp = mse(batch_y[index, :, :, :].contiguous(), outputs[index, :, :, :].contiguous()).cpu().detach().numpy()
+            MAE_temp = mae(batch_y[index, :,:,:],outputs[index,:,:,:]).cpu().detach().numpy()
+
 
             for u in range(outputs.shape[1]):
                 MAE_d=mae(outputs[:,u,:,:],batch_y[:,u,:,:]).cpu().detach().numpy()
@@ -187,6 +206,8 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
         print('MAE:',mae_list)
         print('RMSE:',rmse_list)
         print('R2_score:',r2_score_list)
+
+        return mse_list[0],r2_score_list[0]
 
     
         # print('MAPE:',mape_list)
