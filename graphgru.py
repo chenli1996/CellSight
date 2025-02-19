@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from graphgru_model import *
 from graphgru_eval import *
-import argparse
+import argparse 
 # torch.autograd.set_detect_anomaly(True)
 
 
@@ -368,8 +368,8 @@ if __name__ == '__main__':
     mse_eval_list = []
     r2_eval_list = []
     future_list = []
-    # for future in [150,60,30,10,1]:
-    for future in [60]:
+    for future in [150,60,30,10,1]:
+    # for future in [60]:
     # for future in [1]:
         print(f'future:{future}')
         mse_eval, r2_eval = main(future)
