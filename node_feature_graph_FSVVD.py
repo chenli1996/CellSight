@@ -4,7 +4,21 @@ from point_cloud_FoV_utils import *
 import pandas as pd
 from tqdm import tqdm
 from FSVVD_data_utils import *
+import time
 
+class AccumulatingTimer:
+    def __init__(self):
+        self.total_time = 0.0
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.perf_counter() - self.start
+        self.total_time += elapsed
+        # print(f"Elapsed time for this block: {elapsed:.6f} seconds")
+timer = AccumulatingTimer()
 
 # write a function to get graph edges, which is node index pair, based on the voxel grid index set, the graph is a 3D grid graph
 def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
@@ -186,7 +200,7 @@ def generate_node_feature(baseline='GT'):
                     extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll_fsvvd(yaw_degree, pitch_degree, roll_degree, para_eye)
 
 
-
+                    # with timer:
                     # pcd = pcd.voxel_down_sample(voxel_size=8)
                     # get the occupancy feature
                     occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
@@ -219,6 +233,8 @@ def generate_node_feature(baseline='GT'):
                     node_index.append(graph_voxel_grid_integer_index_set)
                     coordinate_feature.append(graph_voxel_grid_coords_array)
                     distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
+                # print(f"Total running time : {timer.total_time:.6f} seconds")
+                # w                    
                 # save the features to the csv file
                 occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
                 in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)

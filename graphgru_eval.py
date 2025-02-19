@@ -6,6 +6,20 @@ from torchmetrics import MeanAbsoluteError, MeanAbsolutePercentageError, MeanSqu
 import matplotlib.pyplot as plt
 from utils_graphgru import *
 from sklearn.metrics import r2_score
+import time
+class AccumulatingTimer:
+    def __init__(self):
+        self.total_time = 0.0
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.perf_counter() - self.start
+        self.total_time += elapsed
+        print(f"Elapsed time for this block: {elapsed:.6f} seconds")
+timer = AccumulatingTimer()
 
 def eval_model(mymodel,test_loader,model_prefix,history=90,future=60):
     mae = MeanAbsoluteError().cuda()
@@ -95,6 +109,7 @@ def eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=90,fu
 
             batch_x=batch_x.cuda()
             batch_y=batch_y.cuda()
+            # with timer:
             outputs = net(batch_x) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
 
     # -------------------mask the output and label to get the non-zero values

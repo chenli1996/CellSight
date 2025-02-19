@@ -216,7 +216,7 @@ def get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matr
 # get in-FoV feature
 # uniformly distrubute the points in the whole space and generate a new pcd
     pcd_N = randomly_add_points_in_point_cloud(
-        N=90000,min_bound=graph_min_bound,max_bound=graph_max_bound)
+        N=10000,min_bound=graph_min_bound,max_bound=graph_max_bound)
     point_counts_in_voxel_full, _ = get_number_of_points_in_voxel_grid(pcd_N,voxel_size,graph_min_bound,graph_max_bound)
     # get the points in the FoV
     pcd_N = get_points_in_FoV(pcd_N, intrinsic_matrix, extrinsic_matrix, image_width, image_height)

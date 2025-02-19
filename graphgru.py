@@ -16,9 +16,9 @@ import argparse
 # torch.set_default_device()
 # torch.set_default_tensor_type(torch.FloatTensor)
 parser = argparse.ArgumentParser(description='GraphGRU Training Script')
-parser.add_argument('--data', type=str, default='fsvvd_raw', help='Name of the dataset to use, fsvvd_raw, 8i etc')
-# parser.add_argument('--data', type=str, default='8i', help='Name of the dataset to use, fsvvd_raw, 8i etc')
-parser.add_argument('--pred', type=int, default=4, help='Index of the feature to predict, 2,3,4 etc')
+# parser.add_argument('--data', type=str, default='fsvvd_raw', help='Name of the dataset to use, fsvvd_raw, 8i etc')
+parser.add_argument('--data', type=str, default='8i', help='Name of the dataset to use, fsvvd_raw, 8i etc')
+parser.add_argument('--pred', type=int, default=2, help='Index of the feature to predict, 2,3,4 etc')
 args = parser.parse_args()
 
 def main(future=10):
@@ -169,6 +169,7 @@ def main(future=10):
                                             shuffle=True,num_workers=4,drop_last=True)
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                             batch_size=int(test_x.shape[0]/2),
+                                            # batch_size=1,
                                             shuffle=False,drop_last=True)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                             batch_size=int(val_x.shape[0]/2),
@@ -368,8 +369,8 @@ if __name__ == '__main__':
     mse_eval_list = []
     r2_eval_list = []
     future_list = []
-    for future in [150,60,30,10,1]:
-    # for future in [60]:
+    # for future in [150,60,30,10,1]:
+    for future in [60]:
     # for future in [1]:
         print(f'future:{future}')
         mse_eval, r2_eval = main(future)
