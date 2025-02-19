@@ -3,7 +3,21 @@ from point_cloud_FoV_utils import *
 import pandas as pd
 from tqdm import tqdm
 import math
+import time
 
+class AccumulatingTimer:
+    def __init__(self):
+        self.total_time = 0.0
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.perf_counter() - self.start
+        self.total_time += elapsed
+        # print(f"Elapsed time for this block: {elapsed:.6f} seconds")
+timer = AccumulatingTimer()
 
 # write a function to get graph edges, which is node index pair, based on the voxel grid index set, the graph is a 3D grid graph
 def get_graph_edges(original_index_to_integer_index,graph_voxel_grid_coords):
@@ -175,38 +189,41 @@ def generate_node_feature(baseline='GT'):
                     extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
 
 
-
+                    with timer:
                     # pcd = pcd.voxel_down_sample(voxel_size=8)
                     # get the occupancy feature
-                    occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
-                    # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
-                    
+                        occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
+                        # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
+                        
 
-                    # get the in_FoV_voxel_percentage_dict
-                    in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                    # print('in_FoV_dict:         ',in_FoV_percentage_dict[(1, 5, 2)])
+                        # get the in_FoV_voxel_percentage_dict
+                        in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                        # print('in_FoV_dict:         ',in_FoV_percentage_dict[(1, 5, 2)])
 
-                    # get occlusion level
-                    # deep copy the pcd
-                    
-                    occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                    # occulusion_array = None
-                    # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
-                    # print('occupancy_dict:      ',occupancy_dict)
-                    # print('occupancy_array:      ',occupancy_array)
-                    # print('occlusion_level_dict:',occlusion_level_dict)
-                    # print('occulusion_array:    ',occulusion_array)
-                    # print('in_FoV_dict:         ',in_FoV_percentage_dict)
-                    # print('in_FoV_array:        ',in_FoV_voxel_percentage_array)
-                    # visualize the voxel grid
-                    # visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,para_eye,graph_voxel_grid_integer_index_set,graph_voxel_grid_coords)
-                    # append features
+                        # get occlusion level
+                        # deep copy the pcd
+                        
+                        occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                        # occulusion_array = np.array(occupancy_array)
+                        # occulusion_array = None
+                        # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
+                        # print('occupancy_dict:      ',occupancy_dict)
+                        # print('occupancy_array:      ',occupancy_array)
+                        # print('occlusion_level_dict:',occlusion_level_dict)
+                        # print('occulusion_array:    ',occulusion_array)
+                        # print('in_FoV_dict:         ',in_FoV_percentage_dict)
+                        # print('in_FoV_array:        ',in_FoV_voxel_percentage_array)
+                        # visualize the voxel grid
+                        # visualize_voxel_grid(pcd,pcd_hpr,graph_min_bound,graph_max_bound,voxel_size,para_eye,graph_voxel_grid_integer_index_set,graph_voxel_grid_coords)
+                        # append features
                     occupancy_feature.append(occupancy_array)
                     in_FoV_feature.append(in_FoV_voxel_percentage_array)
                     occlusion_feature.append(occulusion_array)
                     node_index.append(graph_voxel_grid_integer_index_set)
                     coordinate_feature.append(graph_voxel_grid_coords_array)
                     distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
+                print(f"Total running time : {timer.total_time:.6f} seconds")
+                # w
                 # save the features to the csv file
                 occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
                 in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)
@@ -218,8 +235,12 @@ def generate_node_feature(baseline='GT'):
                 f_theta_feature = 2 * in_FoV_feature * np.arctan( voxel_size / (2 * distance_feature))
                 # import pdb; pdb.set_trace()
                 # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
+                # node_feature = np.concatenate((occupancy_feature,in_FoV_feature,f_theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
+                # node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
+
                 node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,v_theta_feature,f_theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
+
                 if not os.path.exists(f'./data/{prefix}'):
                     os.makedirs(f'./data/{prefix}')
                 if baseline == 'GT':
@@ -237,7 +258,7 @@ def generate_node_feature(baseline='GT'):
 if __name__ == '__main__':
     # generate_graph(voxel_size=128) # run once to generate graph edges
     # for baseline in ['LR','TLR','MLP']:
-    for baseline in ['MLP']:
+    for baseline in ['GT']:
     # for baseline in ['GT','LSTM','LR','TLR','MLP']:
         generate_node_feature(baseline=baseline)
     # generate_node_feature()
