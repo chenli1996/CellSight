@@ -19,13 +19,7 @@ from sklearn.metrics import r2_score
 torch.set_default_dtype(torch.float32)
 
 def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
@@ -720,20 +714,6 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
         # import pdb;pdb.set_trace()
         mse_list.append(round(MSE_d.item(),4))
         R2_score_list.append(round(final_r2_score,3))
-
-
-        # get the var of test_y[:,u,:,2:3] after masking off all zeros
-        # test_y = test_y_TLR
-        # test_y = test_y.cpu().detach().numpy()
-        # test_y = test_y[:,u,:,2:3]
-        # mask = test_y != 0
-        # test_y = test_y[mask]
-        # var = np.var(test_y)
-        # # get the distrubution result of test_y
-        # plt.hist(test_y.ravel(),bins=100)
-        # plt.savefig(f'./data/fig/test_y_{history}_{future}.png')
-
-        # print(f'var:{var},history:{history},future:{future}')
 
 
         del test_y,test_y_TLR

@@ -28,8 +28,13 @@ preprocees and downsample PCV on 8i and FSVVD data
 generate node feature base on different trajectory for 8i data
 ### 2.2 node_feature_graph.FSVVD.py
 generate node feature base on different trajectory for FSVVD data
-### 3 graphgru.py
-train model by giving parameters
+### 3. graphgru.py
+train and evaluate model by giving parameters
+### 4. baseline_loss.py
+calculate loss for baselines
+
+
+## Other
 
 
 ### generate_videos_fsvvd.sh
@@ -63,15 +68,9 @@ Renders and saves users' FoV images.
 
 **Note**: Requires setting up a virtual display using Xvfb.
 
-### preprocess.py
-
-Preprocess 8i data, save to binary file, downsammple for hpr
-
-
 ### rendering_pc.py
 
 render 8i data using fov and save to png figures. It can also be used to visualize the ply files using fov.
-
 
 ### run-sbatch_test.py and run-sbatch_test.SBATCH
 
