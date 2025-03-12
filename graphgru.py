@@ -7,18 +7,11 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from graphgru_model import *
 from graphgru_eval import *
 import argparse 
-# torch.autograd.set_detect_anomaly(True)
 
-
-# torch.set_default_tensor_type(torch.DoubleTensor)
-# set to float32
-# torch.set_default_dtype(torch.float32)
-# torch.set_default_device()
-# torch.set_default_tensor_type(torch.FloatTensor)
 parser = argparse.ArgumentParser(description='GraphGRU Training Script')
-# parser.add_argument('--data', type=str, default='fsvvd_raw', help='Name of the dataset to use, fsvvd_raw, 8i etc')
 parser.add_argument('--data', type=str, default='8i', help='Name of the dataset to use, fsvvd_raw, 8i etc')
-parser.add_argument('--pred', type=int, default=2, help='Index of the feature to predict, 2,3,4 etc')
+parser.add_argument('--pred', type=int, default=2, help='Index of the feature to predict, 2,3,4 etc \
+                    2-Cell Viewport Overlap Ratio， 3-Cell Occlusion-aware Visibility, 4-Angular Span, 5-Visible Angular Span')
 args = parser.parse_args()
 
 def main(future=10):
@@ -203,25 +196,10 @@ def main(future=10):
         mymodel=mymodel.cuda()
     # print(mymodel)
     if with_train:
-        # learning_rate=0.0003
-        # if predict_index_end==3:
-        # learning_rate = 0.0001 
         criterion = torch.nn.MSELoss()    # mean-squared error for regression
-        # else:
-            # learning_rate = 0.0003
-            # criterion1 = torch.nn.MSELoss()    # mean-squared error for regression
-            # criterion = torch.nn.MSELoss()    # mean-squared error for regression
-            # criterion = torch.nn.L1Loss()    # L1 loss
-            # new loss using soft dice loss
-            # criterion = SoftDiceLoss()
-            # criterion = torch.nn.CrossEntropyLoss()  # CrossEntropyLoss for classification
         if future == 1:
             learning_rate = 0.0001
-        
-        # optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate,weight_decay=0.01)
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
-        # optimizer = torch.optim.SGD(mymodel.parameters(), lr=learning_rate, momentum=0.9)
-        # optimizer = torch.optim.AdamW(mymodel.parameters(), lr=learning_rate)
         lossa=[]
         val_loss_list = []
 
@@ -260,15 +238,12 @@ def main(future=10):
                     # zero like batch_y
                     
                 # make sure we do not use future info by masking batch_y
-                # import pdb;pdb.set_trace()
                 if object_driven:
                 # outputs = mymodel.forward_object(batch_x,batch_y_object) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
                     outputs = mymodel.forward_output1_o(batch_x,batch_y_object)
                 else:
                     outputs = mymodel(batch_x)
                 optimizer.zero_grad()
-                # break
-                # import pdb;pdb.set_trace()
 
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
@@ -280,12 +255,6 @@ def main(future=10):
                 else:# here is 2
                     batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
                 # ---------
-                # import pdb;pdb.set_trace()
-                # outputs = outputs.view(-1,num_nodes)
-                # batch_y = batch_y.view(-1,num_nodes)
-
-                # outputs = outputs.squeeze(3).squeeze(1)
-                # batch_y = batch_y.squeeze(3).squeeze(1)
 
                 loss = criterion(outputs,batch_y)
                 loss_total=loss_total+loss.item()
@@ -299,11 +268,7 @@ def main(future=10):
                 iter1+=1
                 if i % 100 == 0:
                     print("epoch:%d,  loss: %1.5f" % (epochs, loss.item()),flush=True)
-                    # print(criterion1(outputs,batch_y).item())
-                # break #-----------------------------------------------------------------------
-            # Print profiler results
-            # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=30))  
-            # break                          
+                      
                 
             loss_avg = loss_total/iter1
             losss=loss_avg

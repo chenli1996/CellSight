@@ -28,6 +28,9 @@ preprocees and downsample PCV on 8i and FSVVD data
 generate node feature base on different trajectory for 8i data
 ### 2.2 node_feature_graph.FSVVD.py
 generate node feature base on different trajectory for FSVVD data
+### 3 graphgru.py
+train model by giving parameters
+
 
 ### generate_videos_fsvvd.sh
 
