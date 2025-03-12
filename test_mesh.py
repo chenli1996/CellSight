@@ -22,3 +22,4 @@ print("Computing normal and rendering it.")
 mesh.compute_vertex_normals()
 print(np.asarray(mesh.triangle_normals))
 o3d.visualization.draw_geometries([mesh])
+# test
