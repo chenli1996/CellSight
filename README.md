@@ -1,7 +1,3 @@
-# Point Cloud FoV Graph
-
-An initial representation of point cloud Field of View (FoV) using various scripts for preprocessing, resampling, rendering, and video generation for multiple users.
-
 ## Table of Contents
 
 - [Introduction](#introduction)
