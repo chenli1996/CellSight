@@ -111,15 +111,7 @@ def generate_node_feature(baseline='GT'):
     graph_voxel_grid_coords = results['graph_voxel_grid_coords']
     graph_voxel_grid_coords_array = results['graph_voxel_grid_coords_array']
     original_index_to_integer_index = results['original_index_to_integer_index']
-    # import pdb; pdb.set_trace()
     history = 90
-    # if baseline == 'LR':
-    #     history = 30
-    # baseline = 'GT'
-    # baseline = 'LR'
-    # baseline = 'TLR'
-    # baseline = 'MLP'
-    # baseline = 'LSTM'
     print(f'Processing {baseline}...')
     if baseline == 'GT':
         pcd_name_list = ['longdress','loot','redandblack','soldier']
@@ -137,16 +129,10 @@ def generate_node_feature(baseline='GT'):
             prefix = f'{pcd_name}_VS{voxel_size}'
         else:
             prefix = f'{pcd_name}_VS{voxel_size}_{baseline}'
-        # future = 60
-        # prefix = f'{pcd_name}_VS{voxel_size}_LR' # LR is _LR for testing***********************************************
-        # prefix = f'{pcd_name}_VS{voxel_size}_TLR' # LR is _LR for testing***********************************************
-        # prefix = f'{pcd_name}_VS{voxel_size}_MLP' # MLP is _MLP for testing***********************************************
-        # prefix = f'{pcd_name}_VS{voxel_size}_LSTM' # LSTM is _LSTM for testing***********************************************
-        # prefix = f'{pcd_name}_VS{voxel_size}'
-        # for future in [60]:
+
         for future in future_list:
             print(f'Processing {pcd_name} with history {history} and future {future}...')
-            # for user_i in tqdm(range(1,15)):  # TLP/LR/MLP/LSTM is 15 for testing***********************************************
+        
             for user_i in tqdm(users_list):                
             # for user_i in tqdm(range(1,2)):                
                 participant = 'P'+str(user_i).zfill(2)+'_V1'
@@ -175,39 +161,21 @@ def generate_node_feature(baseline='GT'):
                     # Load the point cloud data
                     pcd = get_pcd_data(point_cloud_name=pcd_name, trajectory_index=trajectory_index%150)
                     # get the position and orientation for the given participant and trajectory index
-                    # import pdb; pdb.set_trace()
                     position = positions[trajectory_index]
                     orientation = orientations[trajectory_index]
                     para_eye = [i*1024/1.8 for i in position]
                     para_eye[2] = -para_eye[2]
-                    # para_eye = np.array(para_eye).reshape(3,1)
                     pitch_degree, yaw_degree, roll_degree = orientation
-                    
                     # Define camera intrinsic parameters
                     intrinsic_matrix = get_camera_intrinsic_matrix(image_width, image_height)
                     # Define camera extrinsic parameters
                     extrinsic_matrix = get_camera_extrinsic_matrix_from_yaw_pitch_roll(yaw_degree, pitch_degree, roll_degree, para_eye)
 
-
                     # with timer:
-                    # pcd = pcd.voxel_down_sample(voxel_size=8)
-                    # get the occupancy feature
-                    with timer:
-                        occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
-                    # print('occupancy_dict:      ',occupancy_dict[(1, 5, 2)])
-                    
+                    occupancy_dict,occupancy_array = get_occupancy_feature(pcd,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size)
 
-                    # get the in_FoV_voxel_percentage_dict
-                        # in_FoV_voxel_percentage_array = np.array(occupancy_array)
-                        in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                    # print('in_FoV_dict:         ',in_FoV_percentage_dict[(1, 5, 2)])
-
-                    # get occlusion level
-                    # deep copy the pcd
-                    
-                        occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
-                    # occulusion_array = np.array(occupancy_array)
-                    # occulusion_array = None
+                    in_FoV_percentage_dict,in_FoV_voxel_percentage_array,pcd_N = get_in_FoV_feature(graph_min_bound,graph_max_bound,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
+                    occlusion_level_dict,occulusion_array,pcd_hpr = get_occlusion_level_dict(pcd,para_eye,graph_min_bound,graph_max_bound,graph_voxel_grid_integer_index_set,voxel_size,intrinsic_matrix,extrinsic_matrix,image_width,image_height)
                     # print('occlusion_level_dict:',occlusion_level_dict[(2, 0, 2)])
                     # print('occupancy_dict:      ',occupancy_dict)
                     # print('occupancy_array:      ',occupancy_array)
@@ -225,8 +193,6 @@ def generate_node_feature(baseline='GT'):
                     coordinate_feature.append(graph_voxel_grid_coords_array)
                     distance_feature.append(np.linalg.norm(graph_voxel_grid_coords_array-para_eye,axis=1).reshape(-1,1))
                 # print(f"Total running time : {timer.total_time:.6f} seconds")
-                # w
-                # save the features to the csv file
                 occupancy_feature = np.array(occupancy_feature).reshape(-1,1)
                 in_FoV_feature = np.array(in_FoV_feature).reshape(-1,1)
                 occlusion_feature = np.array(occlusion_feature).reshape(-1,1)
@@ -235,10 +201,6 @@ def generate_node_feature(baseline='GT'):
                 distance_feature = np.array(distance_feature).reshape(-1,1)
                 v_theta_feature = 2 * occlusion_feature * np.arctan( voxel_size / (2 * distance_feature))
                 f_theta_feature = 2 * in_FoV_feature * np.arctan( voxel_size / (2 * distance_feature))
-                # import pdb; pdb.set_trace()
-                # save to ./data/voxel_size256/node_feature.csv and column name is 'occupancy_feature','in_FoV_feature','occlusion_feature'
-                # node_feature = np.concatenate((occupancy_feature,in_FoV_feature,f_theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
-                # node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
 
                 node_feature = np.concatenate((occupancy_feature,in_FoV_feature,occlusion_feature,v_theta_feature,f_theta_feature,coordinate_feature,distance_feature,node_index),axis=1)
                 node_feature_df = pd.DataFrame(node_feature,columns=['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance','node_index'])
@@ -258,14 +220,8 @@ def generate_node_feature(baseline='GT'):
 
 
 if __name__ == '__main__':
-    # generate_graph(voxel_size=128) # run once to generate graph edges
-    # for baseline in ['LR','TLR','MLP']:
-    for baseline in ['GT']:
-    # for baseline in ['GT','LSTM','LR','TLR','MLP']:
+    generate_graph(voxel_size=128) # run once to generate graph edges
+    # for baseline in ['GT','LSTM','LR','TLR','MLP']:# generate node features for different baselines
+    for baseline in ['GT']: # GT means ground truth
         generate_node_feature(baseline=baseline)
-    # generate_node_feature()
-    # downsample_binary_pcd_data()
-
-# test pull rebase
-
     

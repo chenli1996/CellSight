@@ -2,18 +2,17 @@
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
-- [Scripts Overview](#scripts-overview)
+- [Selected Scripts Overview](#scripts-overview)
   - [generate_videos_fsvvd.sh](#generate_videos_fsvvdsh)
   - [align_FSVVD_preprocess_VVD.py](#align_fsvvd_preprocess_vvdpy)
   - [align_FSVVD_resample_ub.py](#align_fsvvd_resample_ubpy)
   - [align_FSVVD_rendering.py](#align_fsvvd_renderingpy)
-- [Usage](#usage)
-- [Notes](#notes)
 - [License](#license)
 
 ## Introduction
 
-This repository contains scripts developed for processing point cloud data related to users' Field of View (FoV). The primary goal is to preprocess the data, resample user behavior, render FoV images, and generate videos from PNG files for multiple users.
+This repository include orignal data process, model training, evaluation, and also include some script to render FoV images, generate FoV-view videos from user's FoV and PCV.
+There are two dataset, 8i and FSVVD and they requires different preprocess scripts.
 
 ## Prerequisites
 
@@ -23,6 +22,12 @@ This repository contains scripts developed for processing point cloud data relat
 - **Required Python Libraries**: Install using `pip install -r requirements.txt`
 
 ## Scripts Overview
+### 1. prepross.py 
+preprocees and downsample PCV on 8i and FSVVD data
+### 2.1 node_feature_graph.py 
+generate node feature base on different trajectory for 8i data
+### 2.2 node_feature_graph.FSVVD.py
+generate node feature base on different trajectory for FSVVD data
 
 ### generate_videos_fsvvd.sh
 
