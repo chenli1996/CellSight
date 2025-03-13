@@ -355,7 +355,6 @@ if __name__ == '__main__':
     linear_regression_baseline()
     truncated_linear_regression_baseline()
     # Example usage
-    # history_sequence = -np.array([3, 5, 7, 8, 10, 2, 3, 4, 5, 6])
     # future_steps = 3
     # future_predictions = truncate_linear_regression(history_sequence, future_steps)
     # print(future_predictions)
