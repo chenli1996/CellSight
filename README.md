@@ -16,9 +16,8 @@ There are two dataset, 8i and FSVVD and they requires different preprocess scrip
 
 ## Prerequisites
 
-- **Python 3.8**
 - **ffmpeg**: For video generation from image sequences.
-- **Xvfb**: For off-screen rendering.
+- **Xvfb**: For off-screen rendering(used for remote headless server).
 - **Required Python Libraries**: Install using `pip install -r requirements.txt`. Open3d related scripts use Python 3.10.14 and requirements_open3d.txt, for example, node_feature_graph.py, align_FSVVD_rendering.py and rendering_pc.py. CellSight model training and evaluation use Python 3.9.19 and requirements_model.txt. Open3d needs a delicated verison to run some functions. CellSight model training has less constraint and you can use lastest library.
 - **data** save 8i and FSVVD PCV and user FoV trajectory data in ../point_cloud_data/
 
