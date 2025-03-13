@@ -48,5 +48,5 @@ def binary_pcd_data():
 
 if __name__ == "__main__":
     binary_pcd_data()
-    downsample_binary_pcd_data()
-    downsample_binary_pcd_data_FSVVD()
+    # downsample_binary_pcd_data()
+    # downsample_binary_pcd_data_FSVVD()

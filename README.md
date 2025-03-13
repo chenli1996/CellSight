@@ -20,15 +20,18 @@ There are two dataset, 8i and FSVVD and they requires different preprocess scrip
 - **ffmpeg**: For video generation from image sequences.
 - **Xvfb**: For off-screen rendering.
 - **Required Python Libraries**: Install using `pip install -r requirements.txt`
+- **data** save 8i and FSVVD data in ../point_cloud_data/
+
+
 
 ## Scripts Overview
-### 1. prepross.py 
+### 1. preprocess.py 
 preprocees and downsample PCV on 8i and FSVVD data
 ### 2.1 node_feature_graph.py 
 generate node feature base on different trajectory for 8i data
 ### 2.2 node_feature_graph.FSVVD.py
 generate node feature base on different trajectory for FSVVD data
-### 3. graphgru.py
+### 3. CellSight_train_eval.py
 train and evaluate model by giving parameters
 ### 4. baseline_loss.py
 calculate loss for baselines
@@ -96,6 +99,17 @@ training/testing data for our model for 8i dataset
 
 ~/point_cloud_FoV_Graph/data/fsvvd_raw/
 training/testing data for our model for fsvvd_raw dataset
+
+8i data
+https://plenodb.jpeg.org/pc/8ilabs/
+8i user FoV data
+https://github.com/cwi-dis/6DoF-HMD-UserNavigationData
+FSVVD data:
+https://cuhksz-inml.github.io/user-behavior-in-vv-watching/factsfigures.html
+FSVVD user FoV data:
+https://cuhksz-inml.github.io/full_scene_volumetric_video_dataset/factsfigures.html
+### CellSight borrows part of the code structure from GraphGRU
+https://github.com/GraphGRU/GraphGRU
 
 
 
