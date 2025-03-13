@@ -23,10 +23,7 @@ def main(future=10):
     last_val_loss = 0.210087
     object_driven = False
     dataset = args.data
-    # dataset = '8i'
-    # predict_index_end=4 # 3 is occlusion, 2 is in-fov, 4 is resolution
     predict_index_end = args.pred
-
     num_epochs=30
     batch_size = 32
     print(f'dataset:{dataset},predict_index_end:{predict_index_end}')
@@ -63,42 +60,14 @@ def main(future=10):
         num_nodes = 1728
     elif voxel_size == 0.6: # fsvvd full raw
         num_nodes = 280
-    # elif voxel_size == 0.4:
     else:
         num_nodes = None
     history = 90
     future=future
-    # history,future=3,10
     target_output = 1
-    # p_start = 1
-    # p_end = 28
-    # p_end = 4
     output_size = 1
-    
-
-    # batch_size=16 #multi_out
-    # batch_size=32 #G1 90
-    # batch_size=64 # 256 model
-    # batch_size=64*2 #150 64GB
-    # batch_size=25 #G2 T h2
-    # batch_size=32 #T1 h1 fulledge
     hidden_dim = 128
-
-
-    # clip = 600
-    # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_loss_part_{hidden_dim}_{voxel_size}'
-    # model_prefix = f'out1_pred_end2_90_10f_p1_skip1_num_G2_h1_fulledge_100_128'
-    # model_prefix = f'object_driven_G1_rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    # model_prefix = f'rmse_multi_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_G1_h1_fulledge_loss_all_{hidden_dim}_{voxel_size}'
-    # model_prefix = f'{dataset}multi2lr1e4_object_t1_g_only{object_driven}_out{output_size}_pred_end{predict_index_end}_{history}_{future}f_p{target_output}_skip1_num_{hidden_dim}_G1_h1_fulledge_{hidden_dim}_{voxel_size}'
-
-    # model_prefix = f'{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
     model_prefix = f'angular_{dataset}_outputsize{output_size}_history{history}_future{future}_predict_index_end{predict_index_end}_hiddendim{hidden_dim}_voxel_size{voxel_size}_num_nodes{num_nodes}'
-
-    # print(dataset,model_prefix,history,future,p_start,p_end,voxel_size,num_nodes)
-
-
-
     if dataset == 'fsvvd_raw':
         train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     elif dataset == 'fsvvd_filtered':
@@ -107,8 +76,7 @@ def main(future=10):
         train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
     else:
         pass
-    # import pdb;pdb.set_trace()
-    # only keep 0:pred_index_end and -4: features
+
     assert train_x.shape[-1] == 9
     assert train_y.shape[-1] == 9
     assert test_x.shape[-1] == 9
@@ -131,13 +99,6 @@ def main(future=10):
         test_y = np.concatenate((test_y[:,:,:, :predict_index_end], test_y[:,:,:, -4:]), axis=3)
         val_x = np.concatenate((val_x[:,:,:, :predict_index_end], val_x[:,:,:, -4:]), axis=3)
         val_y = np.concatenate((val_y[:,:,:, :predict_index_end], val_y[:,:,:, -4:]), axis=3)
-    
-
-    # import pdb;pdb.set_trace()
-
-
-
-
     print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape,
           'shape of test_x:',test_x.shape,'shape of test_y:',test_y.shape,
           'shape of val_x:',val_x.shape,'shape of val_y:',val_y.shape)
@@ -146,17 +107,10 @@ def main(future=10):
     test_x = torch.from_numpy(test_x)
     test_y = torch.from_numpy(test_y)
     val_x = torch.from_numpy(val_x)
-    val_y = torch.from_numpy(val_y)
-    # import pdb;pdb.set_trace()
-    # train_x[:,:,:,]
-    
+    val_y = torch.from_numpy(val_y)    
     train_dataset=torch.utils.data.TensorDataset(train_x,train_y)
     test_dataset=torch.utils.data.TensorDataset(test_x,test_y)
     val_dataset=torch.utils.data.TensorDataset(val_x,val_y)
-
-    # test_dataset=torch.utils.data.TensorDataset(val_x,val_y)
-    # val_dataset=torch.utils.data.TensorDataset(test_x,test_y)
-
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                             batch_size=batch_size,
                                             shuffle=True,num_workers=4,drop_last=True)
@@ -167,23 +121,12 @@ def main(future=10):
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                             batch_size=int(val_x.shape[0]/2),
                                             shuffle=False,drop_last=True)     
-    # test_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-    #                                         batch_size=int(val_x.shape[0]),
-    #                                         shuffle=False,drop_last=True)
-    # val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-    #                                         batch_size=int(val_x.shape[0]),
-    #                                         shuffle=False,drop_last=True)  
-    # check test_loader and val_loader are same
-    # import pdb;pdb.set_trace()
-    # print('len of train_loader:',len(train_loader),'len of test_loader:',len(test_loader),'len of val_loader:',len(val_loader))  
-    # load graph edges
 
     edge_path = f'./data/{edge_prefix}/graph_edges_integer_index.csv'
     # r1, r2 = getedge('newedge',900)
     r1, r2 = getedge(edge_path)
     feature_num = train_x.shape[-1]
     print(f'feature_num:{feature_num},predict_index_end:{predict_index_end}')
-    # assert feature_num == predict_index_end + 4
     input_size = feature_num
     mymodel = GraphGRU(future,input_size,hidden_dim,output_size,history,num_nodes,r1,r2,batch_size)
     # if best model is saved, load it
@@ -202,7 +145,6 @@ def main(future=10):
         optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
         lossa=[]
         val_loss_list = []
-
         # Initialize the early stopping object
         if continue_train_early_stop_val:
             early_stopping = EarlyStopping(patience=5, verbose=True, val_loss_min=last_val_loss, path=best_checkpoint_model_path) #continue training the best check point
@@ -216,27 +158,17 @@ def main(future=10):
             iter1 = 0
             iter2 = 0
             loss_total=0
-            # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
-                # with record_function("model_training"):
             for i,(batch_x, batch_y) in tqdm(enumerate (train_loader)):
                 # do batch normalization                 
-                # import pdb;pdb.set_trace()
-                # batch_y_object = torch.zeros_like(batch_y) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
-                # batch_y_object[:,:,:,0] = batch_y[:,:,:,0]
-                # batch_y_object[:,:,:,3:6] = batch_y[:,:,:,3:6]
                 batch_y_object = batch_y.clone()
-
                 batch_y=batch_y[:,-target_output,:,:]
                 # keep batch_y as (batch_size, 1, self.num_nodes, self.output_dim)
                 batch_y = batch_y.unsqueeze(1)  
-
                 if torch.cuda.is_available():
                     batch_x=batch_x.cuda()
-                
                     batch_y=batch_y.cuda() # (batch_size, self.output_window, self.num_nodes, self.output_dim)
                     batch_y_object = batch_y_object.cuda()
                     # zero like batch_y
-                    
                 # make sure we do not use future info by masking batch_y
                 if object_driven:
                 # outputs = mymodel.forward_object(batch_x,batch_y_object) # (batch_size, self.output_window, self.num_nodes, self.output_dim)
@@ -244,7 +176,6 @@ def main(future=10):
                 else:
                     outputs = mymodel(batch_x)
                 optimizer.zero_grad()
-
                 # only get loss on the node who has points, in other words, the node whose occupancy is not 0
                 # get the mask of the node whose occupancy is not 0, occupancy is the first feature in batch_y
                 # ---------
@@ -319,16 +250,7 @@ def main(future=10):
 
 
     with torch.no_grad():
-        # train_x_nn,train_y_nn,test_x_nn,test_y_nn,val_x_nn,val_y_nn = get_train_test_data_on_users_all_videos_no_norm(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        # test_x_nn = torch.from_numpy(test_x_nn)
-        # test_y_nn = torch.from_numpy(test_y_nn)
-        # test_dataset_nn=torch.utils.data.TensorDataset(test_x_nn,test_y_nn)
-        # test_loader_nn = torch.utils.data.DataLoader(dataset=test_dataset_nn,
-        #                                         batch_size=int(test_x_nn.shape[0]/10),
-        #                                         shuffle=False,drop_last=True)
-        mse_eval,r2_eval = eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output,predict_index_end=predict_index_end)   
-        # eval_model_sample_num(mymodel,test_loader,test_loader_nn,model_prefix,output_size,history=history,future=future)
-        # eval_model(mymodel,test_loader,model_prefix,history=history,future=future)
+        mse_eval,r2_eval = eval_model_sample(mymodel,test_loader,model_prefix,output_size,history=history,future=future,target_output=target_output,predict_index_end=predict_index_end)  
     return mse_eval,r2_eval
 if __name__ == '__main__':
     mse_eval_list = []
@@ -336,13 +258,10 @@ if __name__ == '__main__':
     future_list = []
     # for future in [150,60,30,10,1]:
     for future in [60]:
-    # for future in [1]:
         print(f'future:{future}')
         mse_eval, r2_eval = main(future)
-        # import pdb;pdb.set_trace()
         mse_eval_list.insert(0,round(mse_eval,4))
         r2_eval_list.insert(0,round(r2_eval,3))
         future_list.insert(0,future)
-        # print(f'future:{future},mse_eval:{mse_eval},r2_eval:{r2_eval}')
     print(f'future_list:{future_list},dataset:{args.data},predict_index_end:{args.pred}')
     print(f'Ours: MSE_list:{mse_eval_list},R2_score_list:{r2_eval_list}')

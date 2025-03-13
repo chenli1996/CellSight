@@ -68,7 +68,6 @@ class EarlyStopping:
 
 def mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end):
     output_size = output_size
-    # import pdb;pdb.set_trace()
     assert output_size == 1 or output_size == 2
     mask = batch_y[:,:,:,0] != 0 # (batch_size, self.output_window, self.num_nodes)
     mask = mask.float() # (batch_size, self.output_window, self.num_nodes)
@@ -77,32 +76,17 @@ def mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end):
     # assert output_size == 1
     # batch_y is only for occlusion now otherwise, batch_y[:,:,:,0:3] or other features
     batch_y = batch_y[:,:,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
-    # mask_b = mask
-    # outputs_b = outputs
-    # batch_y_b = batch_y
-    # import pdb;pdb.set_trace()
-    # print('before',mask_b[0,100,:,0],outputs_b[0,100,:,0],batch_y_b[0,100,:,0])
     mask = mask.expand_as(outputs)
     outputs = outputs * mask
     batch_y = batch_y * mask    
-    # mask_a = mask
-    # outputs_a = outputs
-    # batch_y_a = batch_y
-    # print('after',mask_a[0,100,:,0],outputs_a[0,100,:,0],batch_y_a[0,100,:,0])
-    # import pdb;pdb.set_trace()
     return outputs, batch_y
 
 def mask_outputs_batch_y_cut(outputs, batch_y,u,output_size,predict_index_end):
     output_size = output_size
-    # import pdb;pdb.set_trace()
     assert output_size == 1 or output_size == 2
     mask = batch_y[:,u,:,0] != 0 # (batch_size, self.output_window, self.num_nodes)
     # mask = mask.float() # (batch_size, self.output_window, self.num_nodes)
     mask = mask.unsqueeze(-1) # (batch_size * self.output_window, self.num_nodes, 1)
-    # mask = mask.repeat(1, 1, 1, output_size) # (batch_size , self.output_window, self.num_nodes, output_size)            
-    
-
-    # import pdb;pdb.set_trace()
     batch_y = batch_y[:,u,:,predict_index_end-output_size:predict_index_end] # (batch_size, self.output_window, self.num_nodes, output_size)
     outputs = outputs[:,u,:,predict_index_end-output_size:predict_index_end]
     # import pdb;pdb.set_trace()
@@ -110,11 +94,6 @@ def mask_outputs_batch_y_cut(outputs, batch_y,u,output_size,predict_index_end):
     outputs = outputs[mask]
     batch_y = batch_y[mask]
 
-    # mask_a = mask
-    # outputs_a = outputs
-    # batch_y_a = batch_y
-    # print('after',mask_a[0,100,:,0],outputs_a[0,100,:,0],batch_y_a[0,100,:,0])
-    # import pdb;pdb.set_trace()
     return outputs, batch_y
 
 def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predict_index_end=3,object_driven=False):
@@ -138,7 +117,6 @@ def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predic
             else:
                 outputs = mymodel(batch_x)
             #  -------------            
-            # import pdb;pdb.set_trace()
             if predict_index_end in [3,4]:
                 # occlusion prediction, we have object driven and need mask
                 outputs,batch_y = mask_outputs_batch_y(outputs, batch_y,output_size,predict_index_end=predict_index_end)
@@ -158,11 +136,7 @@ def get_val_loss(mymodel,val_loader,criterion,output_size,target_output=1,predic
     return val_loss   
 
 def getedge(x):
-    # df = pd.read_csv(x, nrows=edge_number)
     df = pd.read_csv(x)
-    # import pdb;pdb.set_trace()
-    # get the df where edge_feature is 1
-    # df = df[df['edge_feature']==1]
     r1 = df.loc[:, 'start_node'].values
     r2 = df.loc[:, 'end_node'].values
     return r1, r2
@@ -184,42 +158,19 @@ def getdata(file_name,data_type):
 
 def getdata_normalize(file_name,data_type):
     df = pd.read_csv(file_name)
-    # x = df[data_type[2]].to_numpy()
-    # x_n = (x - min(x)) / (max(x) - min(x))
-
-    # x_2= df[data_type[1]].to_numpy()
 
     x_list = []
     for feature in data_type:
         x_2 = df[feature].to_numpy()
-        # normalize the data with 60 percentile max and clip outliers to 1
-        # if feature == 'occlusion_feature':
-            # import pdb;pdb.set_trace()
-            # x_2 = np.clip(x_2,0,600)
-            # print('occlusion_feature clipped to 600')
         x_list.append((x_2 - min(x_2)) / (max(x_2) - min(x_2)))
-        # x_list.append(x_2/800)
-    # import pdb;pdb.set_trace()
     return x_list
 
 def getdata_nn(file_name,data_type):
     df = pd.read_csv(file_name)
-    # x = df[data_type[2]].to_numpy()
-    # x_n = (x - min(x)) / (max(x) - min(x))
-
-    # x_2= df[data_type[1]].to_numpy()
-
     x_list = []
     for feature in data_type:
         x_2 = df[feature].to_numpy()
-        # normalize the data with 60 percentile max and clip outliers to 1
-        # if feature == 'occlusion_feature':
-            # import pdb;pdb.set_trace()
-            # x_2 = np.clip(x_2,0,600)
-            # print('occlusion_feature clipped to 600')
-        # x_list.append((x_2 - min(x_2)) / (max(x_2) - min(x_2)))
         x_list.append(x_2)
-    # import pdb;pdb.set_trace()
     return x_list
 
 def rmse(predictions, targets):
@@ -273,20 +224,11 @@ def get_history_future_data_full(data,history,future):
     data_y = []
     if data.shape[0] <= future + history:
         return data_x,data_y
-    # for i in range(0,len(data)-history-future):
-    # #    import pdb;pdb.set_trace()
-    #    data_x.append(data[i:i+history])
-    #    data_y.append(data[i+history:i+history+future])
-    # data_x=np.array(data_x)
-    # data_y=np.array(data_y)
     i = 0
     while i < len(data)-history-future:
         data_x.append(data[i:i+history])
         data_y.append(data[i+history:i+history+future])
         i += 1
-        # print(f'index num{i+history+future}')
-    # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
-    # data_y = data_y[:,:,:,2:3]#only occlusion feature
 
     return data_x,data_y
 
@@ -295,12 +237,6 @@ def get_history_future_data_full_index(data,history,future,index_end,test_index)
     data_y = []
     if data.shape[0] <= future + history:
         return data_x,data_y
-    # for i in range(0,len(data)-history-future):
-    # #    import pdb;pdb.set_trace()
-    #    data_x.append(data[i:i+history])
-    #    data_y.append(data[i+history:i+history+future])
-    # data_x=np.array(data_x)
-    # data_y=np.array(data_y)
     i = 0
     while i < len(data)-history-future:
         data_x.append(data[i:i+history])
@@ -309,20 +245,9 @@ def get_history_future_data_full_index(data,history,future,index_end,test_index)
         print(f'index num{index_end},test_index{test_index},frame_index{(index_end)%150*2}')
         i += 1
         test_index += 1
-        
-    # data_y only get the part of feature, from shape (number of sample, 3, num_nodes, 7)
-    # data_y = data_y[:,:,:,2:3]#only occlusion feature
-    # index_end = i+history+future
     return data_x,data_y,index_end,test_index
 
 def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
     train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # initialize as np array
     train_x = np.array(train_x)
@@ -350,16 +275,8 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
                 # read the data from csv file as numpy array
-                # x = pd.read_csv(node_feature_path)
-                # if only get occlusion_feature from column_name[2:7] list
-                # x = x[column_name].to_numpy()
-                # import pdb;pdb.set_trace()
-                # x=np.array(x)
                 feature_num = len(column_name)
-                # feature_num = 1
-                # print('feature_num:',feature_num)
                 x=x.reshape(feature_num,-1,num_nodes)
-                # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
                 train_x1,train_y1=get_history_future_data_full(x,history,future)
                 if len(train_x1) == 0:
@@ -369,18 +286,11 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
                 train_y.append(train_y1)
         # Force garbage collection
         gc.collect()
-        # import pdb;pdb.set_trace()
-        # try:
         if len(train_x) == 0:
             return np.array([]),np.array([])
         train_x = np.concatenate(train_x)
-        # except:
-        # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
     if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_angular.npy'):
         print('load GT data from file angular')
         # add future history in the file name
@@ -417,13 +327,6 @@ def get_train_test_data_on_users_all_videos(history,future,p_start=1,p_end=28,vo
 
 
 def get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
     train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # initialize as np array
     train_x = np.array(train_x)
@@ -454,11 +357,6 @@ def get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
                 # read the data from csv file as numpy array
-                # x = pd.read_csv(node_feature_path)
-                # if only get occlusion_feature from column_name[2:7] list
-                # x = x[column_name].to_numpy()
-                # import pdb;pdb.set_trace()
-                # x=np.array(x)
                 feature_num = len(column_name)
                 # feature_num = 1
                 # print('feature_num:',feature_num)
@@ -482,10 +380,6 @@ def get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start
         # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if path does not exist, create the path
     if not os.path.exists(f'./data/{dataset}'):
         os.makedirs(f'./data/{dataset}')
 
@@ -499,12 +393,7 @@ def get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start
         test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_angular.npy')
         val_x = np.load(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}_angular.npy')
         val_y = np.load(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}_angular.npy')
-        # train_x = np.load(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy')
-        # train_y = np.load(f'./data/{dataset}/all_videos_train_y{history}_{future}_{voxel_size}.npy')
-        # test_x = np.load(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}.npy')
-        # test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}.npy')
-        # val_x = np.load(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy')
-        # val_y = np.load(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy')
+
 
 
     else:
