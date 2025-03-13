@@ -50,13 +50,11 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
                     continue
                 train_x.append(train_x1)
                 train_y.append(train_y1)
-        # import pdb;pdb.set_trace()
-        # try:
+
         if len(train_x) == 0:
             return [],[]
         train_x = np.concatenate(train_x)
-        # except:
-        # import pdb;pdb.set_trace()
+
         train_y = np.concatenate(train_y)
         return train_x,train_y
     # if data is saved, load it
@@ -92,12 +90,7 @@ def get_train_test_data_on_users_all_videos_LR(history,future,p_start=1,p_end=28
 
 def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
     # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
@@ -137,10 +130,6 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
         # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
     if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_TLR.npy'):
         print('load data from file')
         # add future history in the file name
@@ -161,13 +150,7 @@ def get_train_test_data_on_users_all_videos_TLR(history,future,p_start=1,p_end=2
     return test_x,test_y
 
 def get_train_test_data_on_users_all_videos_MLP(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
@@ -207,10 +190,7 @@ def get_train_test_data_on_users_all_videos_MLP(history,future,p_start=1,p_end=2
         # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
+
     if os.path.exists(f'./data/data/ddall_videos_test_x{history}_{future}_{voxel_size}_MLP.npy'):
         print('load data from file')
         # add future history in the file name
@@ -231,13 +211,7 @@ def get_train_test_data_on_users_all_videos_MLP(history,future,p_start=1,p_end=2
     return test_x,test_y
 
 def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','theta_feature','f_theta_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
@@ -263,7 +237,6 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
                 # feature_num = 1
                 # print('feature_num:',feature_num)
                 x=x.reshape(feature_num,-1,num_nodes)
-                # import pdb;pdb.set_trace()
                 x=x.transpose(1,2,0)
                 train_x1,train_y1=get_history_future_data_full(x,history,future)
                 # train_x1,train_y1,index_end,test_index=get_history_future_data_full_index(x,history,future,index_end,test_index)
@@ -282,10 +255,7 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
         # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
+
     if os.path.exists(f'./data/data/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy'):
         print('load baseline data from file angular')
         # add future history in the file name
@@ -306,13 +276,7 @@ def get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_s
     return test_x,test_y
 
 def get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     column_name = ['occupancy_feature','in_FoV_feature','occlusion_feature','coordinate_x','coordinate_y','coordinate_z','distance']
     pcd_name_list = ['longdress','loot','redandblack','soldier']
     # pcd_name_list = ['soldier']
@@ -352,10 +316,7 @@ def get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=1,p_end=
         # import pdb;pdb.set_trace()
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if os.path.exists(f'./data/data/all_videos_train_x{history}_{future}_{voxel_size}_{clip}.npy'):
+
     if os.path.exists(f'./data/data/ddall_videos_test_x{history}_{future}_{voxel_size}_LSTM.npy'):
         print('load data from file')
         # add future history in the file name
@@ -376,13 +337,7 @@ def get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=1,p_end=
     return test_x,test_y
 
 def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start=1,p_end=28,voxel_size=128,num_nodes=240):
-    # train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
-    # train_start = 1
-    # train_end = 5
-    # test_start = 21
-    # test_end = 26 -3
-    # val_start = 27
-    # val_end = 28
+
     train_x,train_y,test_x,test_y,val_x,val_y = [],[],[],[],[],[]
     # initialize as np array
     train_x = np.array(train_x)
@@ -412,12 +367,7 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
                 node_feature_path = f'./data/{prefix}/{participant}node_feature_angular{history}{future}.csv'
                 norm_data=getdata_normalize(node_feature_path,column_name)
                 x=np.array(norm_data,dtype=np.float32)
-                # read the data from csv file as numpy array
-                # x = pd.read_csv(node_feature_path)
-                # if only get occlusion_feature from column_name[2:7] list
-                # x = x[column_name].to_numpy()
-                # import pdb;pdb.set_trace()
-                # x=np.array(x)
+
                 feature_num = len(column_name)
                 # feature_num = 1
                 # print('feature_num:',feature_num)
@@ -433,19 +383,14 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
                 train_y.append(train_y1)
         # Force garbage collection
         gc.collect()
-        # import pdb;pdb.set_trace()
-        # try:
+
         if len(train_x) == 0:
             return np.array([]),np.array([])
         train_x = np.concatenate(train_x)
-        # except:
-        # import pdb;pdb.set_trace()
+
         train_y = np.concatenate(train_y)
         return train_x,train_y
-    # if data is saved, load it
-    # clip = 600
-    # print('clip:',clip)
-    # if path does not exist, create the path
+
     if not os.path.exists(f'./data/{dataset}'):
         os.makedirs(f'./data/{dataset}')
 
@@ -453,27 +398,18 @@ def get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,hist
         print('load baseline data from file angular')
         test_x = np.load(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy')
         test_y = np.load(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy')
-        # val_x = np.load(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy')
-        # val_y = np.load(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy')
 
     else:
         print('generate data from files')
         # train_x,train_y = get_train_test_data(pcd_name_list[0:3],p_start=p_start,p_end=p_end)
         test_x,test_y = get_train_test_data(pcd_name_list[3:],p_start=p_start,p_end=int(p_end/2)+1)
-        # val_x,val_y = get_train_test_data(pcd_name_list[3:],p_start=int(p_end/2)+1,p_end=p_end)
-        # train_x = train_x.astype(np.float32)
-        # train_y = train_y.astype(np.float32)
+
         test_x = test_x.astype(np.float32)
         test_y = test_y.astype(np.float32)
-        # val_x = val_x.astype(np.float32)
-        # val_y = val_y.astype(np.float32)
-        # save data to file with prefix is all_videos
-        # np.save(f'./data/{dataset}/all_videos_train_x{history}_{future}_{voxel_size}.npy',train_x)
-        # np.save(f'./data/{dataset}/all_videos_train_y{history}_{future}_{voxel_size}.npy',train_y)
+
         np.save(f'./data/{dataset}/all_videos_test_x{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_x)
         np.save(f'./data/{dataset}/all_videos_test_y{history}_{future}_{voxel_size}_{baseline}_angular.npy',test_y)
-        # np.save(f'./data/{dataset}/all_videos_val_x{history}_{future}_{voxel_size}.npy',val_x)
-        # np.save(f'./data/{dataset}/all_videos_val_y{history}_{future}_{voxel_size}.npy',val_y)
+
 
         print('data saved')
 
@@ -498,10 +434,7 @@ def compute_r2_per_sample(y_true, y_pred):
     return r2_scores
 
 def baseline_loss_eval(dataset,baseline,predict_end_index,history):
-    # dataset = '8i'
-    # dataset = 'fsvvd_raw'
-    # baseline = 'LSTM'
-    # baseline = 'MLP'
+
     # predict_end_index = 4 # 2 infov, 3 visibility, 4 resolution
 
     print(f'dataset:{dataset}, baseline:{baseline}, predict_end_index:{predict_end_index}')
@@ -531,20 +464,14 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
     else:
         num_nodes = None
 
-    # history = 10
-    # for future in [1,10,30,60]:
-    # history=90
-    # for future in [1,10,30,60]:
-    # history = 30
-    # predict_end_index = 2 #infov
+
 
     output_size = 1
 
     mse_list = []
     R2_score_list = []
 
-    # for future in [1]:
-    # for future in [150,60,30,10,1]:
+
     # for future in [1,10,30,60,150]:
     for future in [1]:
         print(f'history:{history},future:{future}')
@@ -556,17 +483,9 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
             train_x,train_y,test_x,test_y,val_x,val_y = get_train_test_data_on_users_all_videos_fsvvd(dataset,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         print('shape of train_x:',train_x.shape,'shape of train_y:',train_y.shape)
         del train_x,train_y,val_x,val_y,test_x
-        # test_x_LR,test_y_LR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-        # del test_x_LR
-        # print('shape of test_y:',test_y.shape,'shape of test_y_LR:',test_y_LR.shape)
-        # test_y = torch.from_numpy(test_y)
-        # test_y_LR = torch.from_numpy(test_y_LR)
+
         if dataset == '8i':
-            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_TLR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_MLP(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LR(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-            # test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_LSTM(history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
-            test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
+             test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_baseline(baseline,history,future,p_start=p_start,p_end=p_end,voxel_size=voxel_size,num_nodes=num_nodes)
         else:
             test_x_TLR,test_y_TLR = get_train_test_data_on_users_all_videos_fsvvd_baseline(baseline,dataset,history,future,p_start,p_end,voxel_size,num_nodes)
         del test_x_TLR
@@ -614,83 +533,21 @@ def baseline_loss_eval(dataset,baseline,predict_end_index,history):
             mse_temp = mse(baseline_output, gt_output).cpu().detach().numpy()
             mae_temp = mae(baseline_output, gt_output).cpu().detach().numpy()
 
-            # if mse_temp > 0.12 and mse_temp < 0.15: # 8i p2
-            # if mse_temp > 0.0025 and mse_temp < 0.003: #fsvvd p4 
-            #     print(f'index:{index},MSE:{mse_temp},MAE:{mae_temp}')
-        # import pdb;pdb.set_trace()
-        # print()
 
-            # if index == 497: #8i p2
-            # if index == 504:
-            # if index == 4235: #fsvvd p4
             if index == 1635: #fsvvd p4
                 print(f'index:{index},MSE:{mse_temp}')
                 print('baseline:',baseline_output)
                 print('gt:',gt_output)
             
-        import pdb;pdb.set_trace()
-        print()
-        
-        # MSE_d = mse(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous(), test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()).cpu().detach().numpy()    
-        # print('LSTM')
-        # print(test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1))
-        # print('GT')
-        # print(test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1))
-        # aa = mse(test_y_TLR[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1), test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0].squeeze(-1)).cpu().detach().numpy()
-        # print(aa)
-        # import pdb;pdb.set_trace()
-        # w
 
-        # case_study_test_y = test_y[:, u, :, predict_end_index-output_size:predict_end_index].contiguous()[0]
-        # import pdb;pdb.set_trace()
-        # Calculate the squared errors
-        # squared_errors = (
-        #     test_y[:, u, :, predict_end_index - output_size : predict_end_index] -
-        #     test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index]
-        # ) ** 2
 
-        # Flatten the squared errors if needed
-        # squared_errors = squared_errors.view(-1)
-
-        # Compute the variance of the squared errors
-        # variance = torch.var(squared_errors, unbiased=False).cpu().detach().numpy()
-
-        # print("Variance of the prediction loss:", variance)
-        # Flatten the tensors
         y_true = test_y[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
         y_pred = test_y_TLR[:, u, :, predict_end_index - output_size : predict_end_index].contiguous().squeeze(-1)
         squared_errors = (y_true - y_pred) ** 2
         std_squared_errors = torch.std(squared_errors)
         print("Standard Deviation of Squared Errors:", std_squared_errors.item())
-
-        
-
-        # Compute R² score
-        # Compute per-sample R² scores
-        # r2_scores = compute_r2_per_sample(y_true, y_pred)
-
-        # import pdb;pdb.set_trace()
-        # Compute the final R² score
         final_r2_score = r2_score(y_true.cpu().view(-1), y_pred.cpu().view(-1))
-        # import pdb;pdb.set_trace()
-        
-        # Calculate the mean of y_true
-        # y_true_mean = torch.mean(y_true)
-
-        # # Calculate the total sum of squares (SS_tot) and the residual sum of squares (SS_res)
-        # ss_tot = torch.sum((y_true - y_true_mean) ** 2)
-        # ss_res = torch.sum((y_true - y_pred) ** 2)
-
-        # Calculate R^2 score
-        # r2_manual = 1 - (ss_res / ss_tot)
-        # print("R^2 Score (Manual):", r2_manual)
-
-        # only get non-empty cells
-        # import pdb;pdb.set_trace()
         pred_y_o_non_zero,test_y_o_non_zero = mask_outputs_batch_y_cut(test_y_TLR,test_y, u, output_size, predict_end_index)
-        # import pdb;pdb.set_trace()
-        # pred_y_o_non_zero = pred_y_o_non_zero.cpu().detach().numpy()
-        # test_y_o_non_zero = test_y_o_non_zero.cpu().detach().numpy()
         mse_non_zero = mse(pred_y_o_non_zero, test_y_o_non_zero).cpu().detach().numpy()
         print(f'MSE_non_zero-o:{mse_non_zero}')
         std_squared_errors_non_zero = torch.std((pred_y_o_non_zero - test_y_o_non_zero) ** 2)
