@@ -41,47 +41,22 @@ calculate loss for baselines
 
 
 ### generate_videos_fsvvd.sh
-
 A bash script used to generate videos from PNG files for multiple users. It automates the process of converting image sequences into MP4 videos using `ffmpeg`.
-
 ### align_FSVVD_preprocess_VVD.py
-
 This script preprocesses Volumetric Video Data (VVD) files.
-
-**Functions**:
-
 - Removes the alpha channel from images.
 - Saves processed data to binary files.
 - Forms 300 frames with looping to standardize the length of sequences.
-
 ### align_FSVVD_resample_ub.py
-
 Resamples user behavior data to a consistent frame rate.
-
-**Purpose**: Adjusts the user behavior data to 60Hz to ensure synchronization across different datasets.
-
 ### align_FSVVD_rendering.py
-
 Renders and saves users' FoV images.
-
-**Features**:
-
 - Utilizes off-screen rendering to generate images without a display.
 - Saves FoV images for each user for further processing or visualization.
-
 **Note**: Requires setting up a virtual display using Xvfb.
-
 ### rendering_pc.py
-
 render 8i data using fov and save to png figures. It can also be used to visualize the ply files using fov.
-
-### run-sbatch_test.py and run-sbatch_test.SBATCH
-
-test the variable in sbatch
-
-
 ### baseline_trajectory_prediction.py
-
 TLP, LR baseline
 
 
