@@ -100,13 +100,13 @@ training/testing data for our model for 8i dataset
 ~/point_cloud_FoV_Graph/data/fsvvd_raw/
 training/testing data for our model for fsvvd_raw dataset
 
-8i data
+### 8i data
 https://plenodb.jpeg.org/pc/8ilabs/
-8i user FoV data
+### 8i user FoV data
 https://github.com/cwi-dis/6DoF-HMD-UserNavigationData
-FSVVD data:
+###  FSVVD data:
 https://cuhksz-inml.github.io/user-behavior-in-vv-watching/factsfigures.html
-FSVVD user FoV data:
+### FSVVD user FoV data:
 https://cuhksz-inml.github.io/full_scene_volumetric_video_dataset/factsfigures.html
 ### CellSight borrows part of the code structure from GraphGRU
 https://github.com/GraphGRU/GraphGRU
