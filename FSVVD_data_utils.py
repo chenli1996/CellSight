@@ -147,24 +147,6 @@ def plot_columns(df, columns):
     plt.show()
 
 
-# Example Usage
-# if __name__ == "__main__":
-#     # Sample data
-#     data = {
-#         'Frame': [1, 2, 3, 4, 5],
-#         'Timer': [0.007640, 0.020633, 0.023503, 0.030406, 0.037461],
-#         'HeadX': [-1.006291, -1.006489, -1.006638, -1.006797, -1.006990],
-#         'HeadY': [1.637026, 1.636991, 1.636938, 1.636985, 1.637051],
-#         'HeadZ': [0.262450, 0.261736, 0.260997, 0.260385, 0.259819]
-#     }
-
-#     df = pd.DataFrame(data)
-    
-#     # Resample to 60Hz
-#     resampled_df = resample_dataframe(df, 60)
-#     print(df)
-#     print(resampled_df)
-
 import pandas as pd
 import numpy as np
 
