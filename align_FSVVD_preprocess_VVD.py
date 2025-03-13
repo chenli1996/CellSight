@@ -68,14 +68,6 @@ def fix_ply_alpha(file_path, file_name, fixed_file_path):
     # print(f"Fixed .ply file saved as {output_full_path}")
     return output_full_path
 
-# Example Usage
-# file_path = '../../Chatting/Filtered/'
-# file_name = 'chatting_3_raw.ply'
-# fixed_file_path = '../../Chatting/Fixed/'
-# fix_ply_alpha(file_path, file_name, fixed_file_path)
-
-
-
 
 
 # video_name = 'Chatting'
@@ -89,16 +81,6 @@ def preprocess_VVD(video_name):
     # get all files in the directory raw_file_path
 
     files = os.listdir(raw_file_path)
-    # for file in files:
-    #     if file.endswith('.ply'):
-    #         # only process file with name '_number_' and number is less than 300
-    #         if int(file.split('_')[-2]) >= 300: # do not process file with number >= 300
-    #         # if int(file.split('_')[-2]) >= 1: # do not process file with number >= 300
-    #             continue
-    #         fixed_file = fix_ply_alpha(raw_file_path, file, fixed_file_path)
-    #         # Load the fixed .ply file
-    #         pcd = o3d.io.read_point_cloud(fixed_file)
-    # 
     # Filter the files you want to process
     valid_files = [
         file for file in files
@@ -110,10 +92,6 @@ def preprocess_VVD(video_name):
         fixed_file = fix_ply_alpha(raw_file_path, file, fixed_file_path)
         # Load the fixed .ply file
         pcd = o3d.io.read_point_cloud(fixed_file)
-
-            # Visualize the point cloud
-            # o3d.visualization.draw_geometries([pcd])
-
 
     # read FSVVD and preprocess to 300 frames to binary ply
 
@@ -235,25 +213,20 @@ def get_all_graph_boundary():
     print(f'min_x: {min_x}, max_x: {max_x}, min_y: {min_y}, max_y: {max_y}, min_z: {min_z}, max_z: {max_z}')
     return min_x, max_x, min_y, max_y, min_z, max_z
 
-
-        # w
 if __name__ == '__main__':
     # fix alpha, convert to binary ply, and preprocess to 300 frames
     # for video_name in ['Pulling_trolley']:
-    # for video_name in ['Chatting','Pulling_trolley','Sweep']:
-    #     print(f'Processing {video_name}...')
-    #     preprocess_VVD(video_name)
-
-
+    for video_name in ['Chatting','Pulling_trolley','Sweep']:
+        print(f'Processing {video_name}...')
+        preprocess_VVD(video_name)
 
     # rename filtered file names
-    # video_name = 'Chatting'
-    # video_name = 'Pulling_trolley'
-    # directory = f'../point_cloud_data/FSVVD/{video_name}/Filtered/'
-    # rename_files(video_name,directory)
+    video_name = 'Chatting'
+    directory = f'../point_cloud_data/FSVVD/{video_name}/Filtered/'
+    rename_files(video_name,directory)
 
 
-# get the graph max/min boundary
-    get_all_graph_boundary()
+    # get the graph max/min boundary
+    # get_all_graph_boundary()
 
 

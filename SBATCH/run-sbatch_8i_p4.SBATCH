@@ -17,4 +17,4 @@ singularity exec --nv \
   --overlay /scratch/cl5089/pytorch-example/my_pytorch.ext3:ro \
 	    /scratch/work/public/singularity/cuda11.6.124-cudnn8.4.0.27-devel-ubuntu20.04.4.sif\
 	    /bin/bash -c \
-		"source /ext3/env.sh; conda activate myenv; python graphgru.py --data "${data}" --pred "${pred}"" 
+		"source /ext3/env.sh; conda activate myenv; python Cellsight_train_eval.py --data "${data}" --pred "${pred}"" 

@@ -9,12 +9,10 @@ from tqdm import tqdm
 # given video name, read user behavior trajectory, resample to 60Hz, convert to sin cos, save to file
 # input is the video name, output is the resampled user behavior trajectory file
 
-# video_name = 'Chatting'
-video_name = 'Pulling_trolley'
-video_name = 'Cleaning_whiteboard'
-video_name = 'Sweep'
-video_name = 'Presenting'
-video_name = 'News_interviewing'
+video_name = 'Chatting'
+# video_name = 'Pulling_trolley'
+# video_name = 'Sweep'
+# video_name = 'News_interviewing'
 
 user_behavior_file_path = '../point_cloud_data/FSVVD/ACM_MM23 User Behavior Dataset with Tools/User Movement/'
 files = os.listdir(user_behavior_file_path)
@@ -43,13 +41,11 @@ for file in tqdm(files_chatting):
     
     # Show the first few rows of the DataFrame
     df_full.head()
-    # break
 
     numeric_cols = ['#Frame', 'Timer', 'HeadX', 'HeadY', 'HeadZ']
     # Orientation columns
     orientation_cols = ['HeadRX', 'HeadRY', 'HeadRZ','LEyeRX','LEyeRY', 'LEyeRZ','REyeRX', 'REyeRY', 'REyeRZ']
     sub_column_names = numeric_cols + orientation_cols
-    # import pdb; pdb.set_trace()
     df = df_full[sub_column_names]
     # df = df.head(10)
     df.head()
@@ -83,8 +79,4 @@ for file in tqdm(files_chatting):
     # resampled_file_name is like 'GuoYushan_chatting_resampled.txt', change the file name to 'GuoYushan_Chatting_resampled.txt' using split and capitalize
     current_video_name = resampled_file_name.split('_')[1]
     resampled_file_name = resampled_file_name.replace(current_video_name, current_video_name.capitalize())
-    # import pdb; pdb.set_trace()
-    # print(resampled_file_name)
-
     resampled_df.to_csv(resampled_user_behavior_file_path + resampled_file_name, index=False, sep=' ')
-    # break
