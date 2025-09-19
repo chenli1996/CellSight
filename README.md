@@ -1,84 +1,75 @@
+
+# CellSight: Point Cloud Processing and Model Training
+
+---
+
 ## Table of Contents
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
-- [Selected Scripts Overview](#scripts-overview)
-  - [generate_videos_fsvvd.sh](#generate_videos_fsvvdsh)
-  - [align_FSVVD_preprocess_VVD.py](#align_fsvvd_preprocess_vvdpy)
-  - [align_FSVVD_resample_ub.py](#align_fsvvd_resample_ubpy)
-  - [align_FSVVD_rendering.py](#align_fsvvd_renderingpy)
+- [Workflow Overview](#workflow-overview)
+- [Key Scripts](#key-scripts)
+- [Data Sources](#data-sources)
 - [License](#license)
+
 
 ## Introduction
 
-This repository include orignal data process, model training, evaluation, and also include some script to render FoV images, generate FoV-view videos from user's FoV and PCV.
-There are two dataset, 8i and FSVVD and they requires different preprocess scripts.
+CellSight is a comprehensive toolkit for point cloud data processing, model training, and evaluation. It provides utilities for rendering Field of View (FoV) images, generating FoV-view videos, and handling user trajectory data. The repository supports two datasets: **8i** and **FSVVD**, each requiring dedicated preprocessing scripts.
+
 
 ## Prerequisites
 
-- **ffmpeg**: For video generation from image sequences.
-- **Xvfb**: For off-screen rendering(used for remote headless server).
-- **Required Python Libraries**: Install using `pip install -r requirements.txt`. Open3d related scripts use Python 3.10.14 and requirements_open3d.txt, for example, node_feature_graph.py, align_FSVVD_rendering.py and rendering_pc.py. CellSight model training and evaluation use Python 3.9.19 and requirements_model.txt. Open3d needs a delicated verison to run some functions. CellSight model training has less constraint and you can use lastest library.
-- **data** save 8i and FSVVD PCV and user FoV trajectory data in ../point_cloud_data/
+- **ffmpeg**: Required for video generation from image sequences.
+- **Xvfb**: Enables off-screen rendering (useful for remote/headless servers).
+- **Python Libraries**:
+  - Install dependencies: `pip install -r requirements.txt`
+  - Open3D-related scripts require Python 3.10.14 and `requirements_open3d.txt` (e.g., `node_feature_graph.py`, `align_FSVVD_rendering.py`, `rendering_pc.py`).
+  - CellSight model training/evaluation uses Python 3.9.19 and `requirements_model.txt`.
+  - Open3D requires a specific version for compatibility; CellSight model training is less restrictive and supports newer libraries.
+- **Data Directory**: Store 8i and FSVVD point cloud and user FoV trajectory data in `../point_cloud_data/`.
 
 
+## Workflow Overview
 
-## CellSight Steps
-### 1. Preprocess PCV and user FoV trajecory data 
-align_FSVVD_preprocess_VVD.py reads FSVVD and preprocess
-align_FSVVD_resample_ub.py resamples user behavior data to a consistent frame rate.
-preprocess.py preprocees and downsample PCV on 8i and FSVVD data
-### 2.1 node_feature_graph.py 
-generate node feature base on different trajectory for 8i data
-### 2.2 node_feature_graph.FSVVD.py
-generate node feature base on different trajectory for FSVVD data
-### 3. CellSight_train_eval.py
-train and evaluate model by giving parameters
-### 4. baseline_loss.py
-calculate loss for baselines
+1. **Preprocessing**
+  - `align_FSVVD_preprocess_VVD.py`: Reads and preprocesses FSVVD data.
+  - `align_FSVVD_resample_ub.py`: Resamples user behavior data to a consistent frame rate.
+  - `preprocess.py`: Processes and downsamples point cloud data for both 8i and FSVVD datasets.
+2. **Node Feature Generation**
+  - `node_feature_graph.py`: Generates node features based on user trajectories for 8i data.
+  - `node_feature_graph_FSVVD.py`: Generates node features for FSVVD data.
+3. **Model Training & Evaluation**
+  - `CellSight_train_eval.py`: Trains and evaluates models with configurable parameters.
+4. **Baseline Evaluation**
+  - `baseline_loss.py`: Computes loss metrics for baseline models.
 
 
-## Others
-### generate_videos_fsvvd.sh
-A bash script used to generate videos from PNG files for multiple users. It automates the process of converting image sequences into MP4 videos using `ffmpeg`.
-### align_FSVVD_preprocess_VVD.py
-This script preprocesses Volumetric Video Data (VVD) files.
-- Removes the alpha channel from images.
-- Saves processed data to binary files.
-- Forms 300 frames with looping to standardize the length of sequences.
+## Key Scripts
 
-### align_FSVVD_rendering.py
-Renders and saves users' FoV images.
-- Utilizes off-screen rendering to generate images without a display.
-- Saves FoV images for each user for further processing or visualization.
-**Note**: Requires setting up a virtual display using Xvfb.
-### rendering_pc.py
-render 8i data using fov and save to png figures. It can also be used to visualize the ply files using fov.
-### baseline_trajectory_prediction.py
-TLP, LR baseline
-### node_feature_graph.py and node_feature_graph_FSVVD.py is used to generate node feature for baselines and ground truth
-~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}_{baseline}/
-node_feature for each user after trajectory prediction for {baseline}/
-~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}/
-node_feature for each user for ground truth trajectory
-### baseline_loss.py can generate training/testing data for ours and baselines and evaluate loss(training script can also generate training/testing data for ours)
-~/point_cloud_FoV_Graph/data/data/
-training/testing data for our model for 8i dataset
-~/point_cloud_FoV_Graph/data/fsvvd_raw/
-training/testing data for our model for fsvvd_raw dataset
+- **generate_videos_fsvvd.sh**: Automates video generation from PNG sequences for multiple users using `ffmpeg`.
+- **align_FSVVD_preprocess_VVD.py**: Preprocesses Volumetric Video Data (VVD) files by removing alpha channels, saving to binary, and standardizing sequence length (300 frames).
+- **align_FSVVD_rendering.py**: Renders and saves users' FoV images via off-screen rendering. *Requires Xvfb for virtual display setup.*
+- **rendering_pc.py**: Renders 8i data using FoV and saves as PNG images; also visualizes PLY files.
+- **baseline_trajectory_prediction.py**: Implements TLP and LR baseline trajectory prediction.
+- **node_feature_graph.py / node_feature_graph_FSVVD.py**: Generates node features for baselines and ground truth.
+  - Output directories:
+    - `~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}_{baseline}/`: Node features after trajectory prediction for each baseline.
+    - `~/point_cloud_FoV_Graph/data/{video_name}_VS{voxel_size}/`: Node features for ground truth trajectories.
+- **baseline_loss.py**: Generates training/testing data and evaluates loss for both CellSight and baseline models.
+  - Output directories:
+    - `~/point_cloud_FoV_Graph/data/data/`: Training/testing data for 8i dataset.
+    - `~/point_cloud_FoV_Graph/data/fsvvd_raw/`: Training/testing data for FSVVD dataset.
 
-### 8i data
-https://plenodb.jpeg.org/pc/8ilabs/
-### 8i user FoV data
-https://github.com/cwi-dis/6DoF-HMD-UserNavigationData
-###  FSVVD data:
-https://cuhksz-inml.github.io/user-behavior-in-vv-watching/factsfigures.html
-or
-https://drive.google.com/drive/folders/1le4dzPzfW975YGL1NkLdo3crym-PrX68?usp=sharing
-### FSVVD user FoV data:
-https://cuhksz-inml.github.io/full_scene_volumetric_video_dataset/factsfigures.html
-### CellSight borrows part of the code structure from GraphGRU
-https://github.com/GraphGRU/GraphGRU
+## Data Sources
+
+- **8i Point Cloud Data**: [8i Labs](https://plenodb.jpeg.org/pc/8ilabs/)
+- **8i User FoV Data**: [6DoF-HMD-UserNavigationData](https://github.com/cwi-dis/6DoF-HMD-UserNavigationData)
+- **FSVVD Data**:
+  - [CUHK Facts & Figures](https://cuhksz-inml.github.io/user-behavior-in-vv-watching/factsfigures.html)
+  - [Google Drive](https://drive.google.com/drive/folders/1le4dzPzfW975YGL1NkLdo3crym-PrX68?usp=sharing)
+- **FSVVD User FoV Data**: [CUHK Full Scene Volumetric Video Dataset](https://cuhksz-inml.github.io/full_scene_volumetric_video_dataset/factsfigures.html)
+- **Reference Implementation**: CellSight borrows part of its code structure from [GraphGRU](https://github.com/GraphGRU/GraphGRU)
 
 
 
