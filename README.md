@@ -1,20 +1,3 @@
-# Citation
-
-If you use CellSight or any part of this repository in your research, please kindly cite the following paper:
-
-> Li, C., Zong, T., Hu, Y., Wang, Y., & Liu, Y. (2025, March). Spatial Visibility and Temporal Dynamics: Rethinking Field of View Prediction in Adaptive Point Cloud Video Streaming. In Proceedings of the 16th ACM Multimedia Systems Conference (pp. 24-34).
-
-**BibTeX:**
-```bibtex
-@inproceedings{li2025spatial,
-  title={Spatial Visibility and Temporal Dynamics: Rethinking Field of View Prediction in Adaptive Point Cloud Video Streaming},
-  author={Li, Chenli and Zong, Tian and Hu, Yifan and Wang, Yifan and Liu, Yifan},
-  booktitle={Proceedings of the 16th ACM Multimedia Systems Conference},
-  pages={24--34},
-  year={2025}
-}
-```
-
 
 # CellSight: Point Cloud Processing and Model Training
 
@@ -88,5 +71,10 @@ CellSight is a comprehensive toolkit for point cloud data processing, model trai
 - **FSVVD User FoV Data**: [CUHK Full Scene Volumetric Video Dataset](https://cuhksz-inml.github.io/full_scene_volumetric_video_dataset/factsfigures.html)
 - **Reference Implementation**: CellSight borrows part of its code structure from [GraphGRU](https://github.com/GraphGRU/GraphGRU)
 
+# Citation
+
+If you use CellSight or any part of this repository in your research, please kindly cite the following paper:
+
+> Li, C., Zong, T., Hu, Y., Wang, Y., & Liu, Y. (2025, March). Spatial Visibility and Temporal Dynamics: Rethinking Field of View Prediction in Adaptive Point Cloud Video Streaming. In Proceedings of the 16th ACM Multimedia Systems Conference (pp. 24-34).
 
 
